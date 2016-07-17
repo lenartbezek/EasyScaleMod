@@ -11,38 +11,35 @@ namespace Lench.EasyScale
         public override string DisplayName { get; } = "Easy Scale";
         public override string Author { get; } = "Lench";
         public override bool CanBeUnloaded { get; } = false;
+        public override string BesiegeVersion { get; } = "v0.3";
         public override Version Version { get; } = Assembly.GetExecutingAssembly().GetName().Version;
 
-        private static bool enabled;
+        private static bool scalingEnabled;
+
         private static FieldInfo mapperTypesField = typeof(BlockBehaviour).GetField("mapperTypes", BindingFlags.Instance | BindingFlags.NonPublic);
+
         public override void OnLoad()
         {
-            enabled = Configuration.GetBool("enabled", true);
-            SettingsMenu.RegisterSettingsButton("SCALE", ToggleEnabled, enabled, 12);
+            GameObject.DontDestroyOnLoad(EasyScaleController.Instance);
 
-            Game.OnBlockPlaced += (Transform block) => { AddSliders(); };
-            Game.OnBlockPlaced += (Transform block) => { FixCylinders(); };
-            Game.OnKeymapperOpen += CheckBlockMapper;
+            scalingEnabled = Configuration.GetBool("enabled", true);
+            SettingsMenu.RegisterSettingsButton("SCALE", ToggleEnabled, scalingEnabled, 12);
+
+            Game.OnBlockPlaced += AddSliders;
+            Game.OnKeymapperOpen += () =>
+            {
+                if (!HasSliders(BlockMapper.CurrentInstance.Block))
+                    AddSliders(BlockMapper.CurrentInstance.Block);
+                AddAllSliders();
+            };
+
+            XmlLoader.OnLoad += EasyScaleController.Instance.OnMachineLoad;
+            XmlSaver.OnSave += EasyScaleController.Instance.OnMachineSave;
         }
 
         public override void OnUnload()
         {
-            Configuration.SetBool("enabled", enabled);
-            ToggleEnabled(false);
-
-            Game.OnBlockPlaced -= (Transform block) => { AddSliders(); };
-            Game.OnBlockPlaced -= (Transform block) => { FixCylinders(); };
-            Game.OnKeymapperOpen -= CheckBlockMapper;
-        }
-
-        public static void CheckBlockMapper()
-        {
-            if (!HasSliders(BlockMapper.CurrentInstance.Block))
-            {
-                AddSliders(BlockMapper.CurrentInstance.Block);
-                BlockMapper.CurrentInstance.Refresh();
-            }
-            AddSliders();
+            Configuration.SetBool("enabled", scalingEnabled);
         }
 
         public static bool HasSliders(BlockBehaviour block)
@@ -50,10 +47,17 @@ namespace Lench.EasyScale
             return block.MapperTypes.Exists(match => match.Key == "scale");
         }
 
-        public static void AddSliders()
+        public static void AddAllSliders()
         {
             foreach (var block in Machine.Active().BuildingBlocks.FindAll(block => !HasSliders(block)))
                 AddSliders(block);
+        }
+
+        private static void AddSliders(Transform block)
+        {
+            var blockbehaviour = block.GetComponent<BlockBehaviour>();
+            if (!HasSliders(blockbehaviour))
+                AddSliders(blockbehaviour);
         }
 
         public static void AddSliders(BlockBehaviour block)
@@ -61,7 +65,7 @@ namespace Lench.EasyScale
             var currentMapperTypes = block.MapperTypes;
 
             var scalingToggle = new MToggle("Scaling", "scale", false);
-            scalingToggle.DisplayInMapper = enabled;
+            scalingToggle.DisplayInMapper = scalingEnabled;
             currentMapperTypes.Add(scalingToggle);
 
             if (block.GetBlockID() == (int)BlockType.Brace || 
@@ -76,9 +80,15 @@ namespace Lench.EasyScale
                 };
                 currentMapperTypes.Add(thicknessSlider);
 
+                var cylinderFixToggle = new MToggle("Linkage Fix", "cylinder-fix", EasyScaleController.Instance.LoadedCylinderFix.Contains(block.Guid));
+                cylinderFixToggle.DisplayInMapper = false;
+                cylinderFixToggle.Toggled += (bool active) => FixCylinder(block);
+                currentMapperTypes.Add(cylinderFixToggle);
+
                 scalingToggle.Toggled += (bool active) =>
                 {
                     thicknessSlider.DisplayInMapper = active;
+                    cylinderFixToggle.DisplayInMapper = active;
                 };
             }
             else
@@ -132,82 +142,46 @@ namespace Lench.EasyScale
         {
             if (block.GetBlockID() == (int)BlockType.Brace)
             {
-                var code = block.GetComponent<BraceCode>();
+                var braceCode = block.GetComponent<BraceCode>();
 
-                var startPoint = code.startPoint.position;
-                var endPoint = code.endPoint.position;
-
-                block.transform.localScale = scale;
-
-                code.SetStartPos(startPoint);
-                code.SetEndPos(endPoint);
-                code.CreateCylinderBetweenPoints(code.startPoint.position, code.endPoint.position, code.radius);
-                code.cylinder.localScale = new Vector3(code.radius, (endPoint - startPoint).magnitude / scale.y, code.radius);
-                return;
-            }
-
-            if (block.GetBlockID() == (int)BlockType.Spring ||
-                block.GetBlockID() == (int)BlockType.RopeWinch)
-            {
-                var code = block.GetComponent<SpringCode>();
-
-                var startPoint = code.startPoint.position;
-                var endPoint = code.endPoint.position;
+                var startPoint = braceCode.startPoint.position;
+                var endPoint = braceCode.endPoint.position;
 
                 block.transform.localScale = scale;
 
-                code.SetStartPos(startPoint);
-                code.SetEndPos(endPoint);
-                code.CreateCylinderBetweenPoints(code.startPoint.position, code.endPoint.position, code.radius);
-                code.cylinder.localScale = new Vector3(code.radius, (endPoint - startPoint).magnitude / scale.y, code.radius);
+                braceCode.SetStartPos(startPoint);
+                braceCode.SetEndPos(endPoint);
+                braceCode.CreateCylinderBetweenPoints(braceCode.startPoint.position, braceCode.endPoint.position, braceCode.radius);
+
+                float length_scale = 1;
+                if (block.Toggles.Find(toggle => toggle.Key == "cylinder-fix").IsActive)
+                    length_scale = (braceCode.endPoint.position - braceCode.startPoint.position).magnitude / block.transform.localScale.y;
+                else
+                    length_scale = (braceCode.endPoint.position - braceCode.startPoint.position).magnitude;
+                braceCode.cylinder.localScale = new Vector3(braceCode.radius, length_scale, braceCode.radius);
                 return;
             }
 
             block.transform.localScale = scale;
         }
 
-        public static void FixCylinders()
+        public static void FixAllCylinders()
         {
-            foreach (var block in Machine.Active().BuildingBlocks.FindAll(block =>
-                block.GetBlockID() == (int)BlockType.Brace ||
-                block.GetBlockID() == (int)BlockType.RopeWinch ||
-                block.GetBlockID() == (int)BlockType.Spring))
-                FixCylinders(block);
+            foreach (var block in Machine.Active().BuildingBlocks.FindAll(block => block.GetBlockID() == (int)BlockType.Brace))
+                FixCylinder(block);
         }
 
-        public static void FixCylinders(BlockBehaviour block)
+        public static void FixCylinder(BlockBehaviour block)
         {
             if (block.GetBlockID() == (int)BlockType.Brace)
             {
-                var code = block.GetComponent<BraceCode>();
-
-                var startPoint = code.startPoint.position;
-                var endPoint = code.endPoint.position;
-
-                block.transform.localScale = new Vector3(block.transform.localScale.x, block.transform.localScale.x, block.transform.localScale.x);
-
-                code.SetStartPos(startPoint);
-                code.SetEndPos(endPoint);
-                code.CreateCylinderBetweenPoints(code.startPoint.position, code.endPoint.position, code.radius);
-                code.cylinder.localScale = new Vector3(code.radius, (endPoint - startPoint).magnitude / block.transform.localScale.y, code.radius);
-                return;
-            }
-
-            if (block.GetBlockID() == (int)BlockType.Spring ||
-                block.GetBlockID() == (int)BlockType.RopeWinch)
-            {
-                var code = block.GetComponent<SpringCode>();
-
-                var startPoint = code.startPoint.position;
-                var endPoint = code.endPoint.position;
-
-                block.transform.localScale = new Vector3(block.transform.localScale.x, block.transform.localScale.x, block.transform.localScale.x);
-
-                code.SetStartPos(startPoint);
-                code.SetEndPos(endPoint);
-                code.CreateCylinderBetweenPoints(code.startPoint.position, code.endPoint.position, code.radius);
-                code.cylinder.localScale = new Vector3(code.radius, (endPoint - startPoint).magnitude / block.transform.localScale.y, code.radius);
-                return;
+                var braceCode = block.GetComponent<BraceCode>();
+                float length_scale = 1;
+                if (block.Toggles.Find(toggle => toggle.Key == "cylinder-fix").IsActive)
+                    length_scale = (braceCode.endPoint.position - braceCode.startPoint.position).magnitude / block.transform.localScale.y;
+                else
+                    length_scale = (braceCode.endPoint.position - braceCode.startPoint.position).magnitude;
+                braceCode.cylinder.localScale = new Vector3(braceCode.radius, length_scale, braceCode.radius);
             }
         }
 
@@ -216,7 +190,7 @@ namespace Lench.EasyScale
 
         public static void ToggleEnabled(bool enabled)
         {
-            EasyScale.enabled = enabled;
+            scalingEnabled = enabled;
             OnToggle?.Invoke(enabled);
         }
     }
