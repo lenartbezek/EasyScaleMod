@@ -16,6 +16,16 @@ namespace Lench.EasyScale
 
         private static bool scalingEnabled;
 
+        internal static CopiedData copiedData = null;
+        internal class CopiedData
+        {
+            internal float? xScale;
+            internal float? yScale;
+            internal float? zScale;
+            internal float? thickness;
+            internal bool? cylinderFix;
+        }
+
         private static FieldInfo mapperTypesField = typeof(BlockBehaviour).GetField("mapperTypes", BindingFlags.Instance | BindingFlags.NonPublic);
 
         public override void OnLoad()
@@ -28,6 +38,10 @@ namespace Lench.EasyScale
             Game.OnBlockPlaced += AddSliders;
             Game.OnKeymapperOpen += () =>
             {
+                BlockMapper.CurrentInstance.CopyButton.Down += Copy;
+                BlockMapper.CurrentInstance.PasteButton.Down += Paste;
+                BlockMapper.CurrentInstance.ResetButton.Down += Reset;
+
                 if (!HasSliders(BlockMapper.CurrentInstance.Block))
                     AddSliders(BlockMapper.CurrentInstance.Block);
                 AddAllSliders();
@@ -62,8 +76,10 @@ namespace Lench.EasyScale
 
         public static void AddSliders(BlockBehaviour block)
         {
+            // Get current mapper types
             var currentMapperTypes = block.MapperTypes;
 
+            // Create new mapper types
             var scalingToggle = new MToggle("Scaling", "scale", false);
             scalingToggle.DisplayInMapper = scalingEnabled;
             currentMapperTypes.Add(scalingToggle);
@@ -129,13 +145,80 @@ namespace Lench.EasyScale
                 };
             }
 
+            // Mod enable toggle
             OnToggle += (bool enabled) =>
             {
                 scalingToggle.DisplayInMapper = enabled;
                 scalingToggle.IsActive = false;
             };
 
+            // Set new mapper types
             mapperTypesField.SetValue(block, currentMapperTypes);
+
+            // Add initial state
+            block.InitialState.Write("bmt-x-scale", 1f);
+            block.InitialState.Write("bmt-y-scale", 1f);
+            block.InitialState.Write("bmt-y-scale", 1f);
+            block.InitialState.Write("bmt-thickness", 1f);
+            block.InitialState.Write("bmt-cylinder-fix", false);
+        }
+
+        internal static void Reset()
+        {
+#if DEBUG
+            Debug.Log("Resetting for " + BlockMapper.CurrentInstance.Block.name);
+#endif
+            var b = BlockMapper.CurrentInstance.Block;
+            if (b.GetBlockID() == (int)BlockType.Brace ||
+                b.GetBlockID() == (int)BlockType.RopeWinch ||
+                b.GetBlockID() == (int)BlockType.Spring)
+            {
+                b.Sliders.Find(s => s.Key == "thickness").Value = 1f;
+                b.Toggles.Find(s => s.Key == "cylinder-fix").IsActive = false;
+            }
+            else
+            {
+                b.Sliders.Find(s => s.Key == "x-scale").Value = 1;
+                b.Sliders.Find(s => s.Key == "y-scale").Value = 1;
+                b.Sliders.Find(s => s.Key == "z-scale").Value = 1;
+            }
+        }
+
+        internal static void Copy()
+        {
+#if DEBUG
+            Debug.Log("Copying from " + BlockMapper.CurrentInstance.Block.name);
+#endif
+            var b = BlockMapper.CurrentInstance.Block;
+            copiedData = new CopiedData
+            {
+                xScale = b.Sliders.Find(s => s.Key == "x-scale")?.Value,
+                yScale = b.Sliders.Find(s => s.Key == "y-scale")?.Value,
+                zScale = b.Sliders.Find(s => s.Key == "z-scale")?.Value,
+                thickness = b.Sliders.Find(s => s.Key == "thickness")?.Value,
+                cylinderFix = b.Toggles.Find(s => s.Key == "cylinder-fix")?.IsActive
+            };
+        }
+
+        internal static void Paste()
+        {
+#if DEBUG
+            Debug.Log("Pasting to " + BlockMapper.CurrentInstance.Block.name);
+#endif
+            if (copiedData == null)
+                return;
+            var b = BlockMapper.CurrentInstance.Block;
+            b.Toggles.Find(s => s.Key == "scale").IsActive = true;
+            if (copiedData.thickness.HasValue && b.Sliders.Exists(s => s.Key == "thickness"))
+                b.Sliders.Find(s => s.Key == "thickness").Value = copiedData.thickness.Value;
+            if (copiedData.cylinderFix.HasValue && b.Toggles.Exists(s => s.Key == "cylinder-fix"))
+                b.Toggles.Find(s => s.Key == "cylinder-fix").IsActive = copiedData.cylinderFix.Value;
+            if (copiedData.xScale.HasValue && b.Sliders.Exists(s => s.Key == "x-scale"))
+                b.Sliders.Find(s => s.Key == "x-scale").Value = copiedData.xScale.Value;
+            if (copiedData.yScale.HasValue && b.Sliders.Exists(s => s.Key == "y-scale"))
+                b.Sliders.Find(s => s.Key == "y-scale").Value = copiedData.yScale.Value;
+            if (copiedData.zScale.HasValue && b.Sliders.Exists(s => s.Key == "z-scale"))
+                b.Sliders.Find(s => s.Key == "z-scale").Value = copiedData.zScale.Value;
         }
 
         public static void ScaleBlock(BlockBehaviour block, Vector3 scale)
@@ -185,8 +268,8 @@ namespace Lench.EasyScale
             }
         }
 
-        public delegate void EnableToggleHandler(bool visible);
-        public static event EnableToggleHandler OnToggle;
+        private delegate void EnableToggleHandler(bool visible);
+        private static event EnableToggleHandler OnToggle;
 
         public static void ToggleEnabled(bool enabled)
         {

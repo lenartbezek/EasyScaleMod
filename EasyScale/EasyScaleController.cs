@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace Lench.EasyScale
 {
@@ -16,7 +17,7 @@ namespace Lench.EasyScale
             foreach (var blockinfo in info.Blocks.FindAll(b => b.ID == (int)BlockType.Brace))
             {
                 var block = Machine.Active().BuildingBlocks.Find(b => b.Guid == blockinfo.Guid);
-                blockinfo.BlockData.Write("esc-cylinder-fix", (block.Toggles.Find(toggle => toggle.Key == "cylinder-fix").IsActive));
+                blockinfo.BlockData.Write("bmt-linkage-fix", (block.Toggles.Find(toggle => toggle.Key == "cylinder-fix").IsActive));
             }
         }
 
@@ -25,8 +26,8 @@ namespace Lench.EasyScale
             LoadedCylinderFix = new List<Guid>();
             foreach (var blockinfo in info.Blocks.FindAll(b => b.ID == (int)BlockType.Brace))
             {
-                if (blockinfo.BlockData.HasKey("esc-cylinder-fix") &&
-                    blockinfo.BlockData.ReadBool("esc-cylinder-fix"))
+                if (blockinfo.BlockData.HasKey("bmt-linkage-fix") &&
+                    blockinfo.BlockData.ReadBool("bmt-linkage-fix"))
                     LoadedCylinderFix.Add(blockinfo.Guid);
             }
 
@@ -40,6 +41,14 @@ namespace Lench.EasyScale
                 EasyScale.AddAllSliders();
                 EasyScale.FixAllCylinders();
                 MachineLoaded = false;
+            }
+
+            if (BlockMapper.CurrentInstance != null)
+            {
+                if (InputManager.CopyKeys())
+                    EasyScale.Copy();
+                if (InputManager.PasteKeys())
+                    EasyScale.Paste();
             }
         }
     }
