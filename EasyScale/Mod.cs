@@ -101,16 +101,25 @@ namespace Lench.EasyScale
             xScaleSlider.DisplayInMapper = false;
             xScaleSlider.ValueChanged += (float value) =>
             {
+                if (Input.GetKey(KeyCode.LeftShift) && value != Mathf.Round(value * 10) / 10)
+                {
+                    value = Mathf.Round(value * 10) / 10;
+                    xScaleSlider.Value = value;
+                }
                 var scale = block.transform.localScale;
                 ScaleBlock(block, new Vector3(value, scale.y, scale.z));
             };
             currentMapperTypes.Add(xScaleSlider);
                 
-
             var yScaleSlider = new MSlider("Y Scale", "y-scale", block.transform.localScale.y, 0.1f, 3f);
             yScaleSlider.DisplayInMapper = false;
             yScaleSlider.ValueChanged += (float value) =>
             {
+                if (Input.GetKey(KeyCode.LeftShift) && value != Mathf.Round(value * 10) / 10)
+                {
+                    value = Mathf.Round(value * 10) / 10;
+                    yScaleSlider.Value = value;
+                }
                 var scale = block.transform.localScale;
                 ScaleBlock(block, new Vector3(scale.x, value, scale.z));
             };
@@ -120,6 +129,11 @@ namespace Lench.EasyScale
             zScaleSlider.DisplayInMapper = false;
             zScaleSlider.ValueChanged += (float value) =>
             {
+                if (Input.GetKey(KeyCode.LeftShift) && value != Mathf.Round(value * 10) / 10)
+                {
+                    value = Mathf.Round(value * 10) / 10;
+                    zScaleSlider.Value = value;
+                }
                 var scale = block.transform.localScale;
                 ScaleBlock(block, new Vector3(scale.x, scale.y, value));
             };
