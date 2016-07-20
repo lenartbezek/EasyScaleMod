@@ -97,7 +97,12 @@ namespace Lench.EasyScale
             scalingToggle.DisplayInMapper = scalingEnabled;
             currentMapperTypes.Add(scalingToggle);
 
+            // Slider definitions
             var xScaleSlider = new MSlider("X Scale", "x-scale", block.transform.localScale.x, 0.1f, 3f);
+            var yScaleSlider = new MSlider("Y Scale", "y-scale", block.transform.localScale.y, 0.1f, 3f);
+            var zScaleSlider = new MSlider("Z Scale", "z-scale", block.transform.localScale.z, 0.1f, 3f);
+
+            // Slider properties
             xScaleSlider.DisplayInMapper = false;
             xScaleSlider.ValueChanged += (float value) =>
             {
@@ -106,12 +111,16 @@ namespace Lench.EasyScale
                     value = Mathf.Round(value * 10) / 10;
                     xScaleSlider.Value = value;
                 }
+                if (Input.GetKey(KeyCode.LeftControl))
+                {
+                    yScaleSlider.Value = value;
+                    zScaleSlider.Value = value;
+                }
                 var scale = block.transform.localScale;
                 ScaleBlock(block, new Vector3(value, scale.y, scale.z));
             };
             currentMapperTypes.Add(xScaleSlider);
                 
-            var yScaleSlider = new MSlider("Y Scale", "y-scale", block.transform.localScale.y, 0.1f, 3f);
             yScaleSlider.DisplayInMapper = false;
             yScaleSlider.ValueChanged += (float value) =>
             {
@@ -120,12 +129,16 @@ namespace Lench.EasyScale
                     value = Mathf.Round(value * 10) / 10;
                     yScaleSlider.Value = value;
                 }
+                if (Input.GetKey(KeyCode.LeftControl))
+                {
+                    xScaleSlider.Value = value;
+                    zScaleSlider.Value = value;
+                }
                 var scale = block.transform.localScale;
                 ScaleBlock(block, new Vector3(scale.x, value, scale.z));
             };
             currentMapperTypes.Add(yScaleSlider);
 
-            var zScaleSlider = new MSlider("Z Scale", "z-scale", block.transform.localScale.z, 0.1f, 3f);
             zScaleSlider.DisplayInMapper = false;
             zScaleSlider.ValueChanged += (float value) =>
             {
@@ -133,6 +146,11 @@ namespace Lench.EasyScale
                 {
                     value = Mathf.Round(value * 10) / 10;
                     zScaleSlider.Value = value;
+                }
+                if (Input.GetKey(KeyCode.LeftControl))
+                {
+                    xScaleSlider.Value = value;
+                    yScaleSlider.Value = value;
                 }
                 var scale = block.transform.localScale;
                 ScaleBlock(block, new Vector3(scale.x, scale.y, value));

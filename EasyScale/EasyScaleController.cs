@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace Lench.EasyScale
 {
@@ -48,6 +49,8 @@ namespace Lench.EasyScale
                     EasyScale.Copy();
                 if (InputManager.PasteKeys())
                     EasyScale.Paste();
+                if (Input.GetKeyUp(KeyCode.LeftControl))
+                    BlockMapper.CurrentInstance.Refresh();
             }
         }
     }
