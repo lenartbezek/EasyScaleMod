@@ -16,14 +16,12 @@ namespace Lench.EasyScale
 
         private static bool scalingEnabled;
 
-        internal static CopiedData copiedData = null;
-        internal class CopiedData
+        private static CopiedData copiedData = null;
+
+        private class CopiedData
         {
-            internal float? xScale;
-            internal float? yScale;
-            internal float? zScale;
-            internal float? thickness;
-            internal bool? cylinderFix;
+            public Vector3 scale;
+            public bool? cylinderFix;
         }
 
         private static FieldInfo mapperTypesField = typeof(BlockBehaviour).GetField("mapperTypes", BindingFlags.Instance | BindingFlags.NonPublic);
@@ -56,17 +54,28 @@ namespace Lench.EasyScale
             Configuration.SetBool("enabled", scalingEnabled);
         }
 
+        /// <param name="block"></param>
+        /// <returns>True if block has added sliders.</returns>
         public static bool HasSliders(BlockBehaviour block)
         {
             return block.MapperTypes.Exists(match => match.Key == "scale");
         }
 
+        /// <summary>
+        /// Adds sliders to all blocks.
+        /// Called on keymapper open.
+        /// </summary>
         public static void AddAllSliders()
         {
             foreach (var block in Machine.Active().BuildingBlocks.FindAll(block => !HasSliders(block)))
                 AddSliders(block);
         }
 
+        /// <summary>
+        /// Wrapper for AddSliders block.
+        /// Checks for existing sliders before adding.
+        /// </summary>
+        /// <param name="block">block's Transform</param>
         private static void AddSliders(Transform block)
         {
             var blockbehaviour = block.GetComponent<BlockBehaviour>();
@@ -74,6 +83,10 @@ namespace Lench.EasyScale
                 AddSliders(blockbehaviour);
         }
 
+        /// <summary>
+        /// Adds sliders to the BlockBehaviour object.
+        /// </summary>
+        /// <param name="block">block's script</param>
         public static void AddSliders(BlockBehaviour block)
         {
             // Get current mapper types
@@ -84,66 +97,54 @@ namespace Lench.EasyScale
             scalingToggle.DisplayInMapper = scalingEnabled;
             currentMapperTypes.Add(scalingToggle);
 
-            if (block.GetBlockID() == (int)BlockType.Brace || 
-                block.GetBlockID() == (int)BlockType.RopeWinch ||
-                block.GetBlockID() == (int)BlockType.Spring)
+            var xScaleSlider = new MSlider("X Scale", "x-scale", block.transform.localScale.x, 0.1f, 3f);
+            xScaleSlider.DisplayInMapper = false;
+            xScaleSlider.ValueChanged += (float value) =>
             {
-                var thicknessSlider = new MSlider("Thickness", "thickness", block.transform.localScale.x, 0.1f, 3f);
-                thicknessSlider.DisplayInMapper = false;
-                thicknessSlider.ValueChanged += (float value) =>
-                {
-                    ScaleBlock(block, new Vector3(value, value, value));
-                };
-                currentMapperTypes.Add(thicknessSlider);
+                var scale = block.transform.localScale;
+                ScaleBlock(block, new Vector3(value, scale.y, scale.z));
+            };
+            currentMapperTypes.Add(xScaleSlider);
+                
 
-                var cylinderFixToggle = new MToggle("Linkage Fix", "cylinder-fix", EasyScaleController.Instance.LoadedCylinderFix.Contains(block.Guid));
+            var yScaleSlider = new MSlider("Y Scale", "y-scale", block.transform.localScale.y, 0.1f, 3f);
+            yScaleSlider.DisplayInMapper = false;
+            yScaleSlider.ValueChanged += (float value) =>
+            {
+                var scale = block.transform.localScale;
+                ScaleBlock(block, new Vector3(scale.x, value, scale.z));
+            };
+            currentMapperTypes.Add(yScaleSlider);
+
+            var zScaleSlider = new MSlider("Z Scale", "z-scale", block.transform.localScale.z, 0.1f, 3f);
+            zScaleSlider.DisplayInMapper = false;
+            zScaleSlider.ValueChanged += (float value) =>
+            {
+                var scale = block.transform.localScale;
+                ScaleBlock(block, new Vector3(scale.x, scale.y, value));
+            };
+            currentMapperTypes.Add(zScaleSlider);
+
+            // Length fix
+            if (block.GetBlockID() == (int)BlockType.Brace)
+            {
+                var cylinderFixToggle = new MToggle("Length Fix", "length-fix", EasyScaleController.Instance.LoadedCylinderFix.Contains(block.Guid));
                 cylinderFixToggle.DisplayInMapper = false;
-                cylinderFixToggle.Toggled += (bool active) => FixCylinder(block);
+                cylinderFixToggle.Toggled += (bool active) => FixCylinder(block.GetComponent<BraceCode>());
                 currentMapperTypes.Add(cylinderFixToggle);
 
                 scalingToggle.Toggled += (bool active) =>
                 {
-                    thicknessSlider.DisplayInMapper = active;
                     cylinderFixToggle.DisplayInMapper = active;
                 };
             }
-            else
+
+            scalingToggle.Toggled += (bool active) =>
             {
-                var xScaleSlider = new MSlider("X Scale", "x-scale", block.transform.localScale.x, 0.1f, 3f);
-                xScaleSlider.DisplayInMapper = false;
-                xScaleSlider.ValueChanged += (float value) =>
-                {
-                    var scale = block.transform.localScale;
-                    ScaleBlock(block, new Vector3(value, scale.y, scale.z));
-                };
-                currentMapperTypes.Add(xScaleSlider);
-                
-
-                var yScaleSlider = new MSlider("Y Scale", "y-scale", block.transform.localScale.y, 0.1f, 3f);
-                yScaleSlider.DisplayInMapper = false;
-                yScaleSlider.ValueChanged += (float value) =>
-                {
-                    var scale = block.transform.localScale;
-                    ScaleBlock(block, new Vector3(scale.x, value, scale.z));
-                };
-                currentMapperTypes.Add(yScaleSlider);
-
-                var zScaleSlider = new MSlider("Z Scale", "z-scale", block.transform.localScale.z, 0.1f, 3f);
-                zScaleSlider.DisplayInMapper = false;
-                zScaleSlider.ValueChanged += (float value) =>
-                {
-                    var scale = block.transform.localScale;
-                    ScaleBlock(block, new Vector3(scale.x, scale.y, value));
-                };
-                currentMapperTypes.Add(zScaleSlider);
-
-                scalingToggle.Toggled += (bool active) =>
-                {
-                    xScaleSlider.DisplayInMapper = active;
-                    yScaleSlider.DisplayInMapper = active;
-                    zScaleSlider.DisplayInMapper = active;
-                };
-            }
+                xScaleSlider.DisplayInMapper = active;
+                yScaleSlider.DisplayInMapper = active;
+                zScaleSlider.DisplayInMapper = active;
+            };
 
             // Mod enable toggle
             OnToggle += (bool enabled) =>
@@ -154,36 +155,25 @@ namespace Lench.EasyScale
 
             // Set new mapper types
             mapperTypesField.SetValue(block, currentMapperTypes);
-
-            // Add initial state
-            block.InitialState.Write("bmt-x-scale", 1f);
-            block.InitialState.Write("bmt-y-scale", 1f);
-            block.InitialState.Write("bmt-y-scale", 1f);
-            block.InitialState.Write("bmt-thickness", 1f);
-            block.InitialState.Write("bmt-cylinder-fix", false);
         }
 
+        /// <summary>
+        /// Called on Reset button click.
+        /// </summary>
         internal static void Reset()
         {
 #if DEBUG
             Debug.Log("Resetting for " + BlockMapper.CurrentInstance.Block.name);
 #endif
             var b = BlockMapper.CurrentInstance.Block;
-            if (b.GetBlockID() == (int)BlockType.Brace ||
-                b.GetBlockID() == (int)BlockType.RopeWinch ||
-                b.GetBlockID() == (int)BlockType.Spring)
-            {
-                b.Sliders.Find(s => s.Key == "thickness").Value = 1f;
-                b.Toggles.Find(s => s.Key == "cylinder-fix").IsActive = false;
-            }
-            else
-            {
-                b.Sliders.Find(s => s.Key == "x-scale").Value = 1;
-                b.Sliders.Find(s => s.Key == "y-scale").Value = 1;
-                b.Sliders.Find(s => s.Key == "z-scale").Value = 1;
-            }
+            b.Sliders.Find(s => s.Key == "x-scale").Value = 1;
+            b.Sliders.Find(s => s.Key == "y-scale").Value = 1;
+            b.Sliders.Find(s => s.Key == "z-scale").Value = 1;
         }
 
+        /// <summary>
+        /// Called on Ctrl+C and Copy button click.
+        /// </summary>
         internal static void Copy()
         {
 #if DEBUG
@@ -192,14 +182,14 @@ namespace Lench.EasyScale
             var b = BlockMapper.CurrentInstance.Block;
             copiedData = new CopiedData
             {
-                xScale = b.Sliders.Find(s => s.Key == "x-scale")?.Value,
-                yScale = b.Sliders.Find(s => s.Key == "y-scale")?.Value,
-                zScale = b.Sliders.Find(s => s.Key == "z-scale")?.Value,
-                thickness = b.Sliders.Find(s => s.Key == "thickness")?.Value,
-                cylinderFix = b.Toggles.Find(s => s.Key == "cylinder-fix")?.IsActive
+                scale = b.transform.localScale,
+                cylinderFix = b.Toggles.Find(s => s.Key == "length-fix")?.IsActive
             };
         }
 
+        /// <summary>
+        /// Called on Ctrl+V and Paste button click.
+        /// </summary>
         internal static void Paste()
         {
 #if DEBUG
@@ -209,18 +199,21 @@ namespace Lench.EasyScale
                 return;
             var b = BlockMapper.CurrentInstance.Block;
             b.Toggles.Find(s => s.Key == "scale").IsActive = true;
-            if (copiedData.thickness.HasValue && b.Sliders.Exists(s => s.Key == "thickness"))
-                b.Sliders.Find(s => s.Key == "thickness").Value = copiedData.thickness.Value;
-            if (copiedData.cylinderFix.HasValue && b.Toggles.Exists(s => s.Key == "cylinder-fix"))
-                b.Toggles.Find(s => s.Key == "cylinder-fix").IsActive = copiedData.cylinderFix.Value;
-            if (copiedData.xScale.HasValue && b.Sliders.Exists(s => s.Key == "x-scale"))
-                b.Sliders.Find(s => s.Key == "x-scale").Value = copiedData.xScale.Value;
-            if (copiedData.yScale.HasValue && b.Sliders.Exists(s => s.Key == "y-scale"))
-                b.Sliders.Find(s => s.Key == "y-scale").Value = copiedData.yScale.Value;
-            if (copiedData.zScale.HasValue && b.Sliders.Exists(s => s.Key == "z-scale"))
-                b.Sliders.Find(s => s.Key == "z-scale").Value = copiedData.zScale.Value;
+            if (b.Sliders.Exists(s => s.Key == "x-scale"))
+                b.Sliders.Find(s => s.Key == "x-scale").Value = copiedData.scale.x;
+            if (b.Sliders.Exists(s => s.Key == "y-scale"))
+                b.Sliders.Find(s => s.Key == "y-scale").Value = copiedData.scale.y;
+            if (b.Sliders.Exists(s => s.Key == "z-scale"))
+                b.Sliders.Find(s => s.Key == "z-scale").Value = copiedData.scale.z;
+            if (copiedData.cylinderFix.HasValue && b.Toggles.Exists(s => s.Key == "length-fix"))
+            b.Toggles.Find(s => s.Key == "length-fix").IsActive = copiedData.cylinderFix.Value;
         }
 
+        /// <summary>
+        /// Scales the block to a given scale.
+        /// </summary>
+        /// <param name="block">BlockBehaviour object</param>
+        /// <param name="scale">Vector3 scale</param>
         public static void ScaleBlock(BlockBehaviour block, Vector3 scale)
         {
             if (block.GetBlockID() == (int)BlockType.Brace)
@@ -234,43 +227,50 @@ namespace Lench.EasyScale
 
                 braceCode.SetStartPos(startPoint);
                 braceCode.SetEndPos(endPoint);
-                braceCode.CreateCylinderBetweenPoints(braceCode.startPoint.position, braceCode.endPoint.position, braceCode.radius);
-
-                float length_scale = 1;
-                if (block.Toggles.Find(toggle => toggle.Key == "cylinder-fix").IsActive)
-                    length_scale = (braceCode.endPoint.position - braceCode.startPoint.position).magnitude / block.transform.localScale.y;
-                else
-                    length_scale = (braceCode.endPoint.position - braceCode.startPoint.position).magnitude;
-                braceCode.cylinder.localScale = new Vector3(braceCode.radius, length_scale, braceCode.radius);
+                FixCylinder(braceCode);
                 return;
             }
 
             block.transform.localScale = scale;
         }
 
+        /// <summary>
+        /// Calls FixCylinder on all braces.
+        /// </summary>
         public static void FixAllCylinders()
         {
             foreach (var block in Machine.Active().BuildingBlocks.FindAll(block => block.GetBlockID() == (int)BlockType.Brace))
-                FixCylinder(block);
+                FixCylinder(block.GetComponent<BraceCode>());
         }
 
-        public static void FixCylinder(BlockBehaviour block)
+        /// <summary>
+        /// Fixes brace's cylinder length.
+        /// </summary>
+        /// <param name="block">BraceCode script</param>
+        public static void FixCylinder(BraceCode brace)
         {
-            if (block.GetBlockID() == (int)BlockType.Brace)
-            {
-                var braceCode = block.GetComponent<BraceCode>();
-                float length_scale = 1;
-                if (block.Toggles.Find(toggle => toggle.Key == "cylinder-fix").IsActive)
-                    length_scale = (braceCode.endPoint.position - braceCode.startPoint.position).magnitude / block.transform.localScale.y;
-                else
-                    length_scale = (braceCode.endPoint.position - braceCode.startPoint.position).magnitude;
-                braceCode.cylinder.localScale = new Vector3(braceCode.radius, length_scale, braceCode.radius);
+            brace.CreateCylinderBetweenPoints(brace.startPoint.position, brace.endPoint.position, brace.radius);
+
+            if (brace.Toggles.Find(toggle => toggle.Key == "length-fix").IsActive)
+            {   // Fix cylinder
+                var block_scale = brace.transform.localScale;
+                var cylinder_length_scale = (brace.endPoint.position - brace.startPoint.position).magnitude;
+                brace.cylinder.localScale = new Vector3(brace.radius, cylinder_length_scale / block_scale.y, brace.radius);
+            }
+            else
+            {   // Reset cylinder
+                var cylinder_length_scale = (brace.endPoint.position - brace.startPoint.position).magnitude;
+                brace.cylinder.localScale = new Vector3(brace.radius, cylinder_length_scale, brace.radius);
             }
         }
 
         private delegate void EnableToggleHandler(bool visible);
         private static event EnableToggleHandler OnToggle;
 
+        /// <summary>
+        /// Called on setting toggle.
+        /// </summary>
+        /// <param name="enabled">Is mod enabled</param>
         public static void ToggleEnabled(bool enabled)
         {
             scalingEnabled = enabled;
