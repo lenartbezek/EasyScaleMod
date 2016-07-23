@@ -26,6 +26,9 @@ namespace Lench.EasyScale
 
         private static FieldInfo mapperTypesField = typeof(BlockBehaviour).GetField("mapperTypes", BindingFlags.Instance | BindingFlags.NonPublic);
 
+        internal const string SliderSnapBinding = "Slider snap";
+        internal const string MoveAllSliderBinding = "Move all sliders";
+
         public override void OnLoad()
         {
             GameObject.DontDestroyOnLoad(EasyScaleController.Instance);
@@ -33,17 +36,11 @@ namespace Lench.EasyScale
             scalingEnabled = Configuration.GetBool("enabled", true);
             SettingsMenu.RegisterSettingsButton("SCALE", ToggleEnabled, scalingEnabled, 12);
 
-            Game.OnBlockPlaced += AddSliders;
-            Game.OnKeymapperOpen += () =>
-            {
-                BlockMapper.CurrentInstance.CopyButton.Down += Copy;
-                BlockMapper.CurrentInstance.PasteButton.Down += Paste;
-                BlockMapper.CurrentInstance.ResetButton.Down += Reset;
+            Keybindings.AddKeybinding(SliderSnapBinding, new Key(KeyCode.LeftShift, KeyCode.None));
+            Keybindings.AddKeybinding(MoveAllSliderBinding, new Key(KeyCode.None, KeyCode.Z));
 
-                if (!HasSliders(BlockMapper.CurrentInstance.Block))
-                    AddSliders(BlockMapper.CurrentInstance.Block);
-                AddAllSliders();
-            };
+            Game.OnBlockPlaced += AddSliders;
+            Game.OnKeymapperOpen += OnKeymapperOpen;
 
             XmlLoader.OnLoad += EasyScaleController.Instance.OnMachineLoad;
             XmlSaver.OnSave += EasyScaleController.Instance.OnMachineSave;
@@ -52,6 +49,24 @@ namespace Lench.EasyScale
         public override void OnUnload()
         {
             Configuration.SetBool("enabled", scalingEnabled);
+        }
+
+        /// <summary>
+        /// Binds copy, paste and reset to key mapper buttons.
+        /// Checks for sliders and refreshes the mapper.
+        /// </summary>
+        private void OnKeymapperOpen()
+        {
+            BlockMapper.CurrentInstance.CopyButton.Click += Copy;
+            BlockMapper.CurrentInstance.PasteButton.Click += Paste;
+            BlockMapper.CurrentInstance.ResetButton.Click += Reset;
+
+            if (!HasSliders(BlockMapper.CurrentInstance.Block))
+            {
+                AddSliders(BlockMapper.CurrentInstance.Block);
+                BlockMapper.CurrentInstance.Refresh();
+            }
+            AddAllSliders();
         }
 
         /// <param name="block"></param>
@@ -106,12 +121,12 @@ namespace Lench.EasyScale
             xScaleSlider.DisplayInMapper = false;
             xScaleSlider.ValueChanged += (float value) =>
             {
-                if (Input.GetKey(KeyCode.LeftShift) && value != Mathf.Round(value * 10) / 10)
+                if (Keybindings.Get(SliderSnapBinding).IsDown() && value != SnapSliderValue(value))
                 {
-                    value = Mathf.Round(value * 10) / 10;
+                    value = SnapSliderValue(value);
                     xScaleSlider.Value = value;
                 }
-                if (Input.GetKey(KeyCode.LeftControl))
+                if (Keybindings.Get(MoveAllSliderBinding).IsDown())
                 {
                     yScaleSlider.Value = value;
                     zScaleSlider.Value = value;
@@ -124,12 +139,12 @@ namespace Lench.EasyScale
             yScaleSlider.DisplayInMapper = false;
             yScaleSlider.ValueChanged += (float value) =>
             {
-                if (Input.GetKey(KeyCode.LeftShift) && value != Mathf.Round(value * 10) / 10)
+                if (Keybindings.Get(SliderSnapBinding).IsDown() && value != SnapSliderValue(value))
                 {
-                    value = Mathf.Round(value * 10) / 10;
+                    value = SnapSliderValue(value);
                     yScaleSlider.Value = value;
                 }
-                if (Input.GetKey(KeyCode.LeftControl))
+                if (Keybindings.Get(MoveAllSliderBinding).IsDown())
                 {
                     xScaleSlider.Value = value;
                     zScaleSlider.Value = value;
@@ -142,12 +157,12 @@ namespace Lench.EasyScale
             zScaleSlider.DisplayInMapper = false;
             zScaleSlider.ValueChanged += (float value) =>
             {
-                if (Input.GetKey(KeyCode.LeftShift) && value != Mathf.Round(value * 10) / 10)
+                if (Keybindings.Get(SliderSnapBinding).IsDown() && value != Mathf.Round(value * 10) / 10)
                 {
-                    value = Mathf.Round(value * 10) / 10;
+                    value = SnapSliderValue(value);
                     zScaleSlider.Value = value;
                 }
-                if (Input.GetKey(KeyCode.LeftControl))
+                if (Keybindings.Get(MoveAllSliderBinding).IsDown())
                 {
                     xScaleSlider.Value = value;
                     yScaleSlider.Value = value;
@@ -187,6 +202,20 @@ namespace Lench.EasyScale
 
             // Set new mapper types
             mapperTypesField.SetValue(block, currentMapperTypes);
+        }
+
+        /// <summary>
+        /// Returns the value rounded to tne nearest snapping value.
+        /// </summary>
+        /// <param name="value">Raw slider value.</param>
+        /// <returns>Snapped slider value.</returns>
+        private static float SnapSliderValue(float value)
+        {
+            if (value % 1f > 0.225f && value % 1f < 0.275f)
+                return Mathf.Floor(value) + 0.25f;
+            if (value % 1f > 0.725f && value % 1f < 0.775f)
+                return Mathf.Floor(value) + 0.75f;
+            return Mathf.Round(value * 10f) / 10f;
         }
 
         /// <summary>
@@ -260,6 +289,21 @@ namespace Lench.EasyScale
                 braceCode.SetStartPos(startPoint);
                 braceCode.SetEndPos(endPoint);
                 FixCylinder(braceCode);
+                return;
+            }
+
+            if (block.GetBlockID() == (int)BlockType.Spring ||
+                block.GetBlockID() == (int)BlockType.RopeWinch)
+            {
+                var springCode = block.GetComponent<SpringCode>();
+
+                var startPoint = springCode.startPoint.position;
+                var endPoint = springCode.endPoint.position;
+
+                block.transform.localScale = scale;
+
+                springCode.SetStartPos(startPoint);
+                springCode.SetEndPos(endPoint);
                 return;
             }
 

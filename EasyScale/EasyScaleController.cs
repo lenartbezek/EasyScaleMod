@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using spaar.ModLoader;
 using UnityEngine;
 
 namespace Lench.EasyScale
@@ -11,6 +12,7 @@ namespace Lench.EasyScale
         internal List<Guid> LoadedCylinderFix = new List<Guid>();
 
         private bool MachineLoaded = false;
+        private bool MovingAllSliders = false;
 
         internal void OnMachineSave(MachineInfo info)
         {
@@ -45,12 +47,16 @@ namespace Lench.EasyScale
 
             if (BlockMapper.CurrentInstance != null)
             {
+                if (MovingAllSliders && !Keybindings.Get(EasyScale.MoveAllSliderBinding).IsDown())
+                    BlockMapper.CurrentInstance.Refresh();
+
+                MovingAllSliders = Keybindings.Get(EasyScale.MoveAllSliderBinding).IsDown();
+
                 if (InputManager.CopyKeys())
                     EasyScale.Copy();
                 if (InputManager.PasteKeys())
                     EasyScale.Paste();
-                if (Input.GetKeyUp(KeyCode.LeftControl))
-                    BlockMapper.CurrentInstance.Refresh();
+                    
             }
         }
     }
