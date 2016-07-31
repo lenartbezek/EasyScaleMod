@@ -52,11 +52,13 @@ namespace Lench.EasyScale
 
                 MovingAllSliders = Keybindings.Get(EasyScale.MoveAllSliderBinding).IsDown();
 
-                if (InputManager.CopyKeys())
-                    EasyScale.Copy();
-                if (InputManager.PasteKeys())
-                    EasyScale.Paste();
-                    
+                if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.LeftCommand))
+                {
+                    if (Input.GetKey(KeyCode.C))
+                        EasyScale.Copy(); 
+                    if (Input.GetKey(KeyCode.V))
+                        EasyScale.Paste();
+                } 
             }
         }
     }

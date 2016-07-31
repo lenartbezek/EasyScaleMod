@@ -20,7 +20,8 @@ namespace Lench.EasyScale
 
         private class CopiedData
         {
-            public Vector3 scale;
+            public bool enabled = false;
+            public Vector3 scale = Vector3.one;
             public bool? cylinderFix;
         }
 
@@ -227,6 +228,7 @@ namespace Lench.EasyScale
             Debug.Log("Resetting for " + BlockMapper.CurrentInstance.Block.name);
 #endif
             var b = BlockMapper.CurrentInstance.Block;
+            b.Toggles.Find(s => s.Key == "scale").IsActive = false;
             b.Sliders.Find(s => s.Key == "x-scale").Value = 1;
             b.Sliders.Find(s => s.Key == "y-scale").Value = 1;
             b.Sliders.Find(s => s.Key == "z-scale").Value = 1;
@@ -243,6 +245,7 @@ namespace Lench.EasyScale
             var b = BlockMapper.CurrentInstance.Block;
             copiedData = new CopiedData
             {
+                enabled = b.Toggles.Find(s => s.Key == "scale").IsActive,
                 scale = b.transform.localScale,
                 cylinderFix = b.Toggles.Find(s => s.Key == "length-fix")?.IsActive
             };
@@ -259,7 +262,7 @@ namespace Lench.EasyScale
             if (copiedData == null)
                 return;
             var b = BlockMapper.CurrentInstance.Block;
-            b.Toggles.Find(s => s.Key == "scale").IsActive = true;
+            b.Toggles.Find(s => s.Key == "scale").IsActive = copiedData.enabled;
             if (b.Sliders.Exists(s => s.Key == "x-scale"))
                 b.Sliders.Find(s => s.Key == "x-scale").Value = copiedData.scale.x;
             if (b.Sliders.Exists(s => s.Key == "y-scale"))
