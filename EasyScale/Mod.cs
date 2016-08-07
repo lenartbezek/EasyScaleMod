@@ -105,6 +105,10 @@ namespace Lench.EasyScale
         /// <param name="block">block's script</param>
         public static void AddSliders(BlockBehaviour block)
         {
+#if DEBUG
+            Debug.Log("Adding sliders to " + block.name);
+#endif
+
             // Get current mapper types
             var currentMapperTypes = block.MapperTypes;
 
@@ -158,7 +162,7 @@ namespace Lench.EasyScale
             zScaleSlider.DisplayInMapper = false;
             zScaleSlider.ValueChanged += (float value) =>
             {
-                if (Keybindings.Get(SliderSnapBinding).IsDown() && value != Mathf.Round(value * 10) / 10)
+                if (Keybindings.Get(SliderSnapBinding).IsDown() && value != SnapSliderValue(value))
                 {
                     value = SnapSliderValue(value);
                     zScaleSlider.Value = value;
