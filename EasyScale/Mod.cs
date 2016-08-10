@@ -11,7 +11,7 @@ namespace Lench.EasyScale
         public override string DisplayName { get; } = "Easy Scale";
         public override string Author { get; } = "Lench";
         public override bool CanBeUnloaded { get; } = false;
-        public override string BesiegeVersion { get; } = "v0.3";
+        public override string BesiegeVersion { get; } = "v0.32";
         public override Version Version { get; } = Assembly.GetExecutingAssembly().GetName().Version;
 
         private static bool scalingEnabled;
@@ -140,7 +140,7 @@ namespace Lench.EasyScale
                 ScaleBlock(block, new Vector3(value, scale.y, scale.z));
             };
             currentMapperTypes.Add(xScaleSlider);
-                
+
             yScaleSlider.DisplayInMapper = false;
             yScaleSlider.ValueChanged += (float value) =>
             {
@@ -177,7 +177,7 @@ namespace Lench.EasyScale
             };
             currentMapperTypes.Add(zScaleSlider);
 
-            // Length fix
+            // Length fix toggle
             if (block.GetBlockID() == (int)BlockType.Brace)
             {
                 var cylinderFixToggle = new MToggle("Length Fix", "length-fix", EasyScaleController.Instance.LoadedCylinderFix.Contains(block.Guid));
@@ -207,6 +207,12 @@ namespace Lench.EasyScale
 
             // Set new mapper types
             mapperTypesField.SetValue(block, currentMapperTypes);
+
+            // Length fix call
+            if (block.GetBlockID() == (int)BlockType.Brace)
+            {
+                FixCylinder(block.GetComponent<BraceCode>());
+            }
         }
 
         /// <summary>
@@ -332,16 +338,27 @@ namespace Lench.EasyScale
         /// <param name="block">BraceCode script</param>
         public static void FixCylinder(BraceCode brace)
         {
+#if DEBUG
+            if (brace == null)
+                Debug.LogError("Brace is null!");
+            else if (brace.Toggles.Find(toggle => toggle.Key == "length-fix") == null)
+                Debug.LogError("Brace has no added sliders.");
+            else
+                Debug.Log("Length fix for " + brace.Guid + " - " + brace.Toggles.Find(toggle => toggle.Key == "length-fix").IsActive);
+#endif
+
             brace.CreateCylinderBetweenPoints(brace.startPoint.position, brace.endPoint.position, brace.radius);
 
             if (brace.Toggles.Find(toggle => toggle.Key == "length-fix").IsActive)
-            {   // Fix cylinder
+            {
+                // Fix cylinder
                 var block_scale = brace.transform.localScale;
                 var cylinder_length_scale = (brace.endPoint.position - brace.startPoint.position).magnitude;
                 brace.cylinder.localScale = new Vector3(brace.radius, cylinder_length_scale / block_scale.y, brace.radius);
             }
             else
-            {   // Reset cylinder
+            {
+                // Reset cylinder
                 var cylinder_length_scale = (brace.endPoint.position - brace.startPoint.position).magnitude;
                 brace.cylinder.localScale = new Vector3(brace.radius, cylinder_length_scale, brace.radius);
             }

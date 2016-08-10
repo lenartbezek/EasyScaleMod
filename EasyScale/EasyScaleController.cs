@@ -11,7 +11,6 @@ namespace Lench.EasyScale
 
         internal List<Guid> LoadedCylinderFix = new List<Guid>();
 
-        private bool MachineLoaded = false;
         private bool MovingAllSliders = false;
 
         internal void OnMachineSave(MachineInfo info)
@@ -19,7 +18,8 @@ namespace Lench.EasyScale
             foreach (var blockinfo in info.Blocks.FindAll(b => b.ID == (int)BlockType.Brace))
             {
                 var block = Machine.Active().BuildingBlocks.Find(b => b.Guid == blockinfo.Guid);
-                blockinfo.BlockData.Write("bmt-length-fix", (block.Toggles.Find(toggle => toggle.Key == "length-fix").IsActive));
+                if (block.Toggles.Find(toggle => toggle.Key == "length-fix").IsActive)
+                    blockinfo.BlockData.Write("bmt-length-fix", true);
             }
         }
 
@@ -32,18 +32,10 @@ namespace Lench.EasyScale
                     blockinfo.BlockData.ReadBool("bmt-length-fix"))
                     LoadedCylinderFix.Add(blockinfo.Guid);
             }
-
-            MachineLoaded = true;
         }
 
         private void Update()
         {
-            if (MachineLoaded)
-            {
-                EasyScale.AddAllSliders();
-                EasyScale.FixAllCylinders();
-                MachineLoaded = false;
-            }
 
             if (BlockMapper.CurrentInstance != null)
             {
