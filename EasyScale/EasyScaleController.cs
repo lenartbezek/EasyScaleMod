@@ -15,22 +15,38 @@ namespace Lench.EasyScale
 
         internal void OnMachineSave(MachineInfo info)
         {
-            foreach (var blockinfo in info.Blocks.FindAll(b => b.ID == (int)BlockType.Brace))
+            try
             {
-                var block = Machine.Active().BuildingBlocks.Find(b => b.Guid == blockinfo.Guid);
-                if (block.Toggles.Find(toggle => toggle.Key == "length-fix").IsActive)
-                    blockinfo.BlockData.Write("bmt-length-fix", true);
+                foreach (var blockinfo in info.Blocks.FindAll(b => b.ID == (int)BlockType.Brace))
+                {
+                    var block = ReferenceMaster.BuildingBlocks.Find(b => b.Guid == blockinfo.Guid);
+                    if (block != null &&
+                        block.Toggles.Find(toggle => toggle.Key == "length-fix") != null &&
+                        block.Toggles.Find(toggle => toggle.Key == "length-fix").IsActive)
+                        blockinfo.BlockData.Write("bmt-length-fix", true);
+                }
+            }
+            catch (Exception e)
+            {
+                ModConsole.AddMessage(LogType.Error, "[EasyScale]: Error saving length fix braces.", e.Message + "\n" + e.StackTrace);
             }
         }
 
         internal void OnMachineLoad(MachineInfo info)
         {
-            LoadedCylinderFix = new List<Guid>();
-            foreach (var blockinfo in info.Blocks.FindAll(b => b.ID == (int)BlockType.Brace))
+            try
             {
-                if (blockinfo.BlockData.HasKey("bmt-length-fix") &&
-                    blockinfo.BlockData.ReadBool("bmt-length-fix"))
-                    LoadedCylinderFix.Add(blockinfo.Guid);
+                LoadedCylinderFix = new List<Guid>();
+                foreach (var blockinfo in info.Blocks.FindAll(b => b.ID == (int)BlockType.Brace))
+                {
+                    if (blockinfo.BlockData.HasKey("bmt-length-fix") &&
+                        blockinfo.BlockData.ReadBool("bmt-length-fix"))
+                        LoadedCylinderFix.Add(blockinfo.Guid);
+                }
+            }
+            catch (Exception e)
+            {
+                ModConsole.AddMessage(LogType.Error, "[EasyScale]: Error saving length fix braces.", e.Message + "\n" + e.StackTrace);
             }
         }
 
