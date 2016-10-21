@@ -11,8 +11,12 @@ namespace Lench.EasyScale
         public override string DisplayName { get; } = "Easy Scale";
         public override string Author { get; } = "Lench";
         public override bool CanBeUnloaded { get; } = false;
-        public override string BesiegeVersion { get; } = "v0.32";
+        public override string BesiegeVersion { get; } = "v0.35";
         public override Version Version { get; } = Assembly.GetExecutingAssembly().GetName().Version;
+        
+#if DEBUG
+        public override string VersionExtra { get; } = "debug";
+#endif
 
         private static bool scalingEnabled;
 
@@ -83,8 +87,9 @@ namespace Lench.EasyScale
         /// </summary>
         public static void AddAllSliders()
         {
-            foreach (var block in Machine.Active().BuildingBlocks.FindAll(block => !HasSliders(block)))
-                AddSliders(block);
+            foreach (var block in Machine.Active().BuildingBlocks)
+                if (!HasSliders(block))
+                    AddSliders(block);
         }
 
         /// <summary>
@@ -106,7 +111,7 @@ namespace Lench.EasyScale
         public static void AddSliders(BlockBehaviour block)
         {
 #if DEBUG
-            Debug.Log("Adding sliders to " + block.name);
+            Debug.Log("Adding sliders to " + block.name + " " + block.Guid);
 #endif
 
             // Get current mapper types
@@ -138,6 +143,9 @@ namespace Lench.EasyScale
                 }
                 var scale = block.transform.localScale;
                 ScaleBlock(block, new Vector3(value, scale.y, scale.z));
+#if DEBUG
+                Debug.Log(block.name + " X -> " + value + ".");
+#endif
             };
             currentMapperTypes.Add(xScaleSlider);
 
@@ -156,6 +164,10 @@ namespace Lench.EasyScale
                 }
                 var scale = block.transform.localScale;
                 ScaleBlock(block, new Vector3(scale.x, value, scale.z));
+
+#if DEBUG
+                Debug.Log(block.name + " Y -> " + value + ".");
+#endif
             };
             currentMapperTypes.Add(yScaleSlider);
 
@@ -174,6 +186,10 @@ namespace Lench.EasyScale
                 }
                 var scale = block.transform.localScale;
                 ScaleBlock(block, new Vector3(scale.x, scale.y, value));
+
+#if DEBUG
+                Debug.Log(block.name + " Z -> " + value + ".");
+#endif
             };
             currentMapperTypes.Add(zScaleSlider);
 
@@ -343,8 +359,8 @@ namespace Lench.EasyScale
                 Debug.LogError("Brace is null!");
             else if (brace.Toggles.Find(toggle => toggle.Key == "length-fix") == null)
                 Debug.LogError("Brace has no added sliders.");
-            else
-                Debug.Log("Length fix for " + brace.Guid + " - " + brace.Toggles.Find(toggle => toggle.Key == "length-fix").IsActive);
+            else if (brace.Toggles.Find(toggle => toggle.Key == "length-fix").IsActive)
+                Debug.Log("Length fix for brace " + brace.Guid);
 #endif
 
             brace.CreateCylinderBetweenPoints(brace.startPoint.position, brace.endPoint.position, brace.radius);

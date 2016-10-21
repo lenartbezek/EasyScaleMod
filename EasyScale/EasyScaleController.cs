@@ -20,10 +20,12 @@ namespace Lench.EasyScale
                 foreach (var blockinfo in info.Blocks.FindAll(b => b.ID == (int)BlockType.Brace))
                 {
                     var block = ReferenceMaster.BuildingBlocks.Find(b => b.Guid == blockinfo.Guid);
-                    if (block != null &&
-                        block.Toggles.Find(toggle => toggle.Key == "length-fix") != null &&
-                        block.Toggles.Find(toggle => toggle.Key == "length-fix").IsActive)
-                        blockinfo.BlockData.Write("bmt-length-fix", true);
+                    if (block != null)
+                    {
+                        var toggle = block.Toggles.Find(t => t.Key == "length-fix");
+                        if (block.Toggles.Find(t => t.Key == "length-fix").IsActive)
+                            blockinfo.BlockData.Write("bmt-length-fix", true);
+                    }
                 }
             }
             catch (Exception e)
@@ -46,13 +48,12 @@ namespace Lench.EasyScale
             }
             catch (Exception e)
             {
-                ModConsole.AddMessage(LogType.Error, "[EasyScale]: Error saving length fix braces.", e.Message + "\n" + e.StackTrace);
+                ModConsole.AddMessage(LogType.Error, "[EasyScale]: Error loading length fix braces.", e.Message + "\n" + e.StackTrace);
             }
         }
 
         private void Update()
         {
-
             if (BlockMapper.CurrentInstance != null)
             {
                 if (MovingAllSliders && !Keybindings.Get(EasyScale.MoveAllSliderBinding).IsDown())
