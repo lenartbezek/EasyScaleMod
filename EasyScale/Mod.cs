@@ -11,7 +11,6 @@ namespace Lench.EasyScale
         public override string DisplayName { get; } = "Easy Scale";
         public override string Author { get; } = "Lench";
         public override bool CanBeUnloaded { get; } = false;
-        public override string BesiegeVersion { get; } = "v0.35";
         public override Version Version { get; } = Assembly.GetExecutingAssembly().GetName().Version;
         
 #if DEBUG
