@@ -20,8 +20,8 @@ namespace Lench.EasyScale
         public override string VersionExtra { get; } = "debug";
 #endif
 
-        public static bool ModEnabled = true;
-        public static bool PrescaleEnabled = false;
+        public static bool ModEnabled;
+        public static bool PrescaleEnabled;
 
         private static CopiedData _copiedData;
 
@@ -48,6 +48,11 @@ namespace Lench.EasyScale
             UnityEngine.Object.DontDestroyOnLoad(Controller.Instance);
 
             ModEnabled = Configuration.GetBool("enabled", true);
+            PrescaleEnabled = Configuration.GetBool("prescale", false);
+            PrescalePanel.Position = new Vector2(
+                Configuration.GetFloat("prescale-pos-x", 500),
+                Configuration.GetFloat("prescale-pos-y", 500));
+
             SettingsMenu.RegisterSettingsButton("SCALE", ToggleEnabled, ModEnabled, 12);
 
             Keybindings.AddKeybinding(SliderSnapBinding, new Key(KeyCode.LeftShift, KeyCode.None));
@@ -64,6 +69,10 @@ namespace Lench.EasyScale
         public override void OnUnload()
         {
             Configuration.SetBool("enabled", ModEnabled);
+            Configuration.SetBool("prescale", PrescaleEnabled);
+            Configuration.SetFloat("prescale-pos-x", PrescalePanel.Position.x);
+            Configuration.SetFloat("prescale-pos-y", PrescalePanel.Position.y);
+            Configuration.Save();
         }
 
         private static void OnMachineSave(MachineInfo info)
