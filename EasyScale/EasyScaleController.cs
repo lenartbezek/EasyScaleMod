@@ -1,4 +1,5 @@
-﻿using spaar.ModLoader;
+﻿using System.Collections.Generic;
+using spaar.ModLoader;
 using System.Reflection;
 using UnityEngine;
 // ReSharper disable UnusedMember.Local
@@ -24,6 +25,8 @@ namespace Lench.EasyScale
             {
                 if (!active) DestroyImmediate(_prescalePanel);
             };
+
+            CheckForModUpdate();
         }
 
         private void Update()
@@ -104,6 +107,21 @@ namespace Lench.EasyScale
                 scale.Scale(new Vector3(0.55f, 0.55f, 0.55f));
             if (_currentGhost)
                 _currentGhost.localScale = scale;
+        }
+
+        private void CheckForModUpdate(bool verbose = false)
+        {
+            var updater = gameObject.AddComponent<Updater>();
+            updater.Check(
+                "Easy Scale Mod",
+                "https://api.github.com/repos/lench4991/EasyScaleMod/releases/latest",
+                Assembly.GetExecutingAssembly().GetName().Version,
+                new List<Updater.Link>()
+                    {
+                            new Updater.Link() { DisplayName = "Spiderling forum page", URL = "http://forum.spiderlinggames.co.uk/index.php?threads/3314/" },
+                            new Updater.Link() { DisplayName = "GitHub release page", URL = "https://github.com/lench4991/EasyScaleMod/releases/latest" }
+                    },
+                verbose);
         }
     }
 }

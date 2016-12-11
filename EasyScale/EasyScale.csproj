@@ -66,6 +66,7 @@
     <Compile Include="PrescalePanel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="EasyScaleController.cs" />
+    <Compile Include="Updater.cs" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
