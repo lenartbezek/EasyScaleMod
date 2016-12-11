@@ -9,8 +9,8 @@ namespace Lench.EasyScale
     {
         public bool Minimized
         {
-            get { return !EasyScale.PrescaleEnabled; }
-            set { EasyScale.PrescaleEnabled = !value; }
+            get { return !Mod.PrescaleEnabled; }
+            set { Mod.PrescaleEnabled = !value; }
         }
 
         public bool Animating { get; private set; }
@@ -107,7 +107,7 @@ namespace Lench.EasyScale
 
         private void OnGUI()
         {
-            if (spaar.ModLoader.Game.IsSimulating || !EasyScale.ModEnabled) return;
+            if (spaar.ModLoader.Game.IsSimulating || !Mod.ModEnabled) return;
             if (Minimized && !Animating) WindowRect.position = MinimizedPosition;
 
             GUI.skin = Skin;

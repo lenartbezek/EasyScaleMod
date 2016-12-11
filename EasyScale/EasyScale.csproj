@@ -62,10 +62,10 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="EasyScale.cs" />
+    <Compile Include="Mod.cs" />
     <Compile Include="PrescalePanel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="EasyScaleController.cs" />
+    <Compile Include="Controller.cs" />
     <Compile Include="Updater.cs" />
   </ItemGroup>
   <ItemGroup />

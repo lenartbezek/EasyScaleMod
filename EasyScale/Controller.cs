@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace Lench.EasyScale
 {
-    public class EasyScaleController : SingleInstance<EasyScaleController>
+    public class Controller : SingleInstance<Controller>
     {
         public override string Name { get; } = "Easy Scale";
 
@@ -21,7 +21,7 @@ namespace Lench.EasyScale
 
         private void Start()
         {
-            EasyScale.OnToggle += (active) =>
+            Mod.OnToggle += (active) =>
             {
                 if (!active) DestroyImmediate(_prescalePanel);
             };
@@ -31,22 +31,22 @@ namespace Lench.EasyScale
 
         private void Update()
         {
-            if (!EasyScale.ModEnabled) return;
+            if (!Mod.ModEnabled) return;
 
             // Handle key presses.
             if (BlockMapper.CurrentInstance != null)
             {
-                if (_movingAllSliders && !Keybindings.Get(EasyScale.MoveAllSliderBinding).IsDown())
+                if (_movingAllSliders && !Keybindings.Get(Mod.MoveAllSliderBinding).IsDown())
                     BlockMapper.CurrentInstance.Refresh();
 
-                _movingAllSliders = Keybindings.Get(EasyScale.MoveAllSliderBinding).IsDown();
+                _movingAllSliders = Keybindings.Get(Mod.MoveAllSliderBinding).IsDown();
 
                 if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.LeftCommand))
                 {
                     if (Input.GetKey(KeyCode.C))
-                        EasyScale.Copy();
+                        Mod.Copy();
                     if (Input.GetKey(KeyCode.V))
-                        EasyScale.Paste();
+                        Mod.Paste();
                 }
             }
 
@@ -74,10 +74,10 @@ namespace Lench.EasyScale
             _currentBlockType = Game.AddPiece.BlockType;
             _currentGhost = GhostFieldInfo.GetValue(Game.AddPiece) as Transform;
 
-            if (_currentGhost == null || !EasyScale.PrescaleEnabled || !EasyScale.ModEnabled) return;
-            if (EasyScale.PrescaleDictionary.ContainsKey(_currentBlockType))
+            if (_currentGhost == null || !Mod.PrescaleEnabled || !Mod.ModEnabled) return;
+            if (Mod.PrescaleDictionary.ContainsKey(_currentBlockType))
             {
-                _prescalePanel.Scale = EasyScale.PrescaleDictionary[_currentBlockType];
+                _prescalePanel.Scale = Mod.PrescaleDictionary[_currentBlockType];
                 _prescalePanel.RefreshSliderStrings();
             }
             else
@@ -89,16 +89,16 @@ namespace Lench.EasyScale
 
         private void EnablePrescale(bool enable)
         {
-            var scale = enable && EasyScale.PrescaleDictionary.ContainsKey(_currentBlockType)
-                ? EasyScale.PrescaleDictionary[_currentBlockType]
+            var scale = enable && Mod.PrescaleDictionary.ContainsKey(_currentBlockType)
+                ? Mod.PrescaleDictionary[_currentBlockType]
                 : PrefabMaster.GetDefaultScale(_currentBlockType);
             ScaleGhost(scale);
         }
 
         private void SetPrescale(Vector3 scale)
         {
-            if (EasyScale.PrescaleEnabled) ScaleGhost(scale);
-            EasyScale.PrescaleDictionary[_currentBlockType] = scale;
+            if (Mod.PrescaleEnabled) ScaleGhost(scale);
+            Mod.PrescaleDictionary[_currentBlockType] = scale;
         }
 
         private void ScaleGhost(Vector3 scale)

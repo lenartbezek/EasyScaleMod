@@ -8,7 +8,7 @@ using UnityEngine;
 
 namespace Lench.EasyScale
 {
-    public class EasyScale : Mod
+    public class Mod : spaar.ModLoader.Mod
     {
         public override string Name { get; } = "Easy Scale";
         public override string DisplayName { get; } = "Easy Scale";
@@ -45,7 +45,7 @@ namespace Lench.EasyScale
 
         public override void OnLoad()
         {
-            UnityEngine.Object.DontDestroyOnLoad(EasyScaleController.Instance);
+            UnityEngine.Object.DontDestroyOnLoad(Controller.Instance);
 
             ModEnabled = Configuration.GetBool("enabled", true);
             SettingsMenu.RegisterSettingsButton("SCALE", ToggleEnabled, ModEnabled, 12);
