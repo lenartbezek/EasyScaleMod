@@ -79,8 +79,8 @@ namespace Lench.EasyScale
             }
         }
 
-        public Vector2 MinimizedPosition => new Vector2(Screen.width - WindowRect.width - 240, Screen.height - 42);
-        public Vector2 Position { get; private set; } = new Vector2(500, 500);
+        public Vector2 MinimizedPosition => new Vector2(Screen.width * 0.8f - WindowRect.width, Screen.height - 42);
+        public static Vector2 Position { get; set; }
 
         private static float DrawSlider(string label, float value, float min, float max, string oldText, out string newText)
         {
@@ -123,7 +123,10 @@ namespace Lench.EasyScale
             GUILayout.BeginHorizontal();
             {
                 // Draw minimize button
-                if (GUILayout.Button("PRESCALE"))
+                if (GUILayout.Button("PRESCALE", 
+                    Minimized 
+                        ? spaar.ModLoader.UI.Elements.Buttons.Red 
+                        : spaar.ModLoader.UI.Elements.Buttons.Default))
                 {
                     if (Minimized)
                     {

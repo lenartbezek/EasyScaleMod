@@ -50,40 +50,43 @@ namespace Lench.EasyScale
                 }
             }
 
-            // Check for AddPiece and create or destroy PrescalePanel
+            
             if (Game.AddPiece)
             {
+                // Create PrescalePanel
                 if (_prescalePanel == null)
                 {
                     _prescalePanel = gameObject.AddComponent<PrescalePanel>();
                     _prescalePanel.OnScaleChanged += SetPrescale;
                     _prescalePanel.OnToggle += EnablePrescale;
                 }
+
+                // Update PrescalePanel slider values when switching block
+                if (_currentBlockType != Game.AddPiece.BlockType || _currentGhost == null)
+                {
+                    _currentBlockType = Game.AddPiece.BlockType;
+                    _currentGhost = GhostFieldInfo.GetValue(Game.AddPiece) as Transform;
+
+                    if (_currentGhost != null && Mod.PrescaleEnabled && Mod.ModEnabled)
+                        if (Mod.PrescaleDictionary.ContainsKey(_currentBlockType))
+                        {
+                            _prescalePanel.Scale = Mod.PrescaleDictionary[_currentBlockType];
+                            _prescalePanel.RefreshSliderStrings();
+                        }
+                        else
+                        {
+                            _prescalePanel.Scale = PrefabMaster.GetDefaultScale(_currentBlockType);
+                            _prescalePanel.RefreshSliderStrings();
+                        }
+                }
             }
             else
             {
+                // Destroy PrescalePanel
                 if (_prescalePanel != null)
                 {
                     DestroyImmediate(_prescalePanel);
                 }
-            }
-
-            // Update PrescalePanel slider values
-            if (!Game.AddPiece) return;
-            if (_currentBlockType == Game.AddPiece.BlockType && _currentGhost != null) return;
-            _currentBlockType = Game.AddPiece.BlockType;
-            _currentGhost = GhostFieldInfo.GetValue(Game.AddPiece) as Transform;
-
-            if (_currentGhost == null || !Mod.PrescaleEnabled || !Mod.ModEnabled) return;
-            if (Mod.PrescaleDictionary.ContainsKey(_currentBlockType))
-            {
-                _prescalePanel.Scale = Mod.PrescaleDictionary[_currentBlockType];
-                _prescalePanel.RefreshSliderStrings();
-            }
-            else
-            {
-                _prescalePanel.Scale = PrefabMaster.GetDefaultScale(_currentBlockType);
-                _prescalePanel.RefreshSliderStrings();
             }
         }
 
@@ -116,10 +119,10 @@ namespace Lench.EasyScale
                 "Easy Scale Mod",
                 "https://api.github.com/repos/lench4991/EasyScaleMod/releases/latest",
                 Assembly.GetExecutingAssembly().GetName().Version,
-                new List<Updater.Link>()
+                new List<Updater.Link>
                     {
-                            new Updater.Link() { DisplayName = "Spiderling forum page", URL = "http://forum.spiderlinggames.co.uk/index.php?threads/3314/" },
-                            new Updater.Link() { DisplayName = "GitHub release page", URL = "https://github.com/lench4991/EasyScaleMod/releases/latest" }
+                            new Updater.Link { DisplayName = "Spiderling forum page", URL = "http://forum.spiderlinggames.co.uk/index.php?threads/3314/" },
+                            new Updater.Link { DisplayName = "GitHub release page", URL = "https://github.com/lench4991/EasyScaleMod/releases/latest" }
                     },
                 verbose);
         }
