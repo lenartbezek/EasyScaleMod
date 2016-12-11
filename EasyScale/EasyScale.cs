@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
+using JetBrains.Annotations;
 using spaar.ModLoader;
 using UnityEngine;
+// ReSharper disable CompareOfFloatsByEqualityOperator
 
 namespace Lench.EasyScale
 {
@@ -18,16 +20,20 @@ namespace Lench.EasyScale
         public override string VersionExtra { get; } = "debug";
 #endif
 
-        private static bool _scalingEnabled;
+        public static bool ModEnabled = true;
+        public static bool PrescaleEnabled = false;
 
-        private static CopiedData _copiedData = null;
+        private static CopiedData _copiedData;
+
+        // ReSharper disable once CollectionNeverQueried.Local
+        private static List<Guid> _loadedBlocks = new List<Guid>();
         private static List<Guid> _loadedCylinderFix = new List<Guid>();
 
         public static Dictionary<int, Vector3> PrescaleDictionary = new Dictionary<int, Vector3>();
 
         private class CopiedData
         {
-            public bool Enabled = false;
+            public bool Enabled;
             public Vector3 Scale = Vector3.one;
             public bool? CylinderFix;
         }
@@ -39,15 +45,16 @@ namespace Lench.EasyScale
 
         public override void OnLoad()
         {
-            GameObject.DontDestroyOnLoad(EasyScaleController.Instance);
+            UnityEngine.Object.DontDestroyOnLoad(EasyScaleController.Instance);
 
-            _scalingEnabled = Configuration.GetBool("enabled", true);
-            SettingsMenu.RegisterSettingsButton("SCALE", ToggleEnabled, _scalingEnabled, 12);
+            ModEnabled = Configuration.GetBool("enabled", true);
+            SettingsMenu.RegisterSettingsButton("SCALE", ToggleEnabled, ModEnabled, 12);
 
             Keybindings.AddKeybinding(SliderSnapBinding, new Key(KeyCode.LeftShift, KeyCode.None));
             Keybindings.AddKeybinding(MoveAllSliderBinding, new Key(KeyCode.None, KeyCode.Z));
 
             Game.OnBlockPlaced += AddSliders;
+            Game.OnBlockPlaced += PrescaleBlock;
             Game.OnKeymapperOpen += OnKeymapperOpen;
 
             XmlLoader.OnLoad += OnMachineLoad;
@@ -56,7 +63,7 @@ namespace Lench.EasyScale
 
         public override void OnUnload()
         {
-            Configuration.SetBool("enabled", _scalingEnabled);
+            Configuration.SetBool("enabled", ModEnabled);
         }
 
         private static void OnMachineSave(MachineInfo info)
@@ -66,11 +73,9 @@ namespace Lench.EasyScale
                 foreach (var blockinfo in info.Blocks.FindAll(b => b.ID == (int)BlockType.Brace))
                 {
                     var block = ReferenceMaster.BuildingBlocks.Find(b => b.Guid == blockinfo.Guid);
-                    if (block != null)
-                    {
-                        if (block.Toggles.Find(t => t.Key == "length-fix").IsActive)
-                            blockinfo.BlockData.Write("bmt-length-fix", true);
-                    }
+                    if (block == null) continue;
+                    if (block.Toggles.Find(t => t.Key == "length-fix").IsActive)
+                        blockinfo.BlockData.Write("bmt-length-fix", true);
                 }
             }
             catch (Exception e)
@@ -84,9 +89,12 @@ namespace Lench.EasyScale
             try
             {
                 _loadedCylinderFix = new List<Guid>();
-                foreach (var blockinfo in info.Blocks.FindAll(b => b.ID == (int)BlockType.Brace))
+                _loadedBlocks = new List<Guid>();
+                foreach (var blockinfo in info.Blocks)
                 {
-                    if (blockinfo.BlockData.HasKey("bmt-length-fix") &&
+                    _loadedBlocks.Add(blockinfo.Guid);
+                    if (blockinfo.ID == (int)BlockType.Brace && 
+                        blockinfo.BlockData.HasKey("bmt-length-fix") &&
                         blockinfo.BlockData.ReadBool("bmt-length-fix"))
                         _loadedCylinderFix.Add(blockinfo.Guid);
                 }
@@ -113,6 +121,23 @@ namespace Lench.EasyScale
                 BlockMapper.CurrentInstance.Refresh();
             }
             AddAllSliders();
+        }
+
+        /// <summary>
+        /// Scales already placed block.
+        /// </summary>
+        /// <param name="block">block's Transform</param>
+        private static void PrescaleBlock(Transform block)
+        {
+            var bb = block.GetComponent<BlockBehaviour>();
+            if (_loadedBlocks.Remove(bb.Guid) || 
+                !PrescaleEnabled || 
+                !ModEnabled || 
+                !PrescaleDictionary.ContainsKey(bb.GetBlockID())) return;
+#if DEBUG
+            Debug.Log("Prescaling block " + block.name + " to " + PrescaleDictionary[bb.GetBlockID()]);
+#endif
+            ScaleBlock(bb, PrescaleDictionary[bb.GetBlockID()]);
         }
 
         /// <param name="block"></param>
@@ -159,8 +184,10 @@ namespace Lench.EasyScale
             var currentMapperTypes = block.MapperTypes;
 
             // Create new mapper types
-            var scalingToggle = new MToggle("Scaling", "scale", false);
-            scalingToggle.DisplayInMapper = _scalingEnabled;
+            var scalingToggle = new MToggle("Scaling", "scale", false)
+            {
+                DisplayInMapper = ModEnabled
+            };
             currentMapperTypes.Add(scalingToggle);
 
             // Slider definitions
@@ -170,7 +197,7 @@ namespace Lench.EasyScale
 
             // Slider properties
             xScaleSlider.DisplayInMapper = false;
-            xScaleSlider.ValueChanged += (float value) =>
+            xScaleSlider.ValueChanged += (value) =>
             {
                 if (Keybindings.Get(SliderSnapBinding).IsDown() && value != SnapSliderValue(value))
                 {
@@ -191,7 +218,7 @@ namespace Lench.EasyScale
             currentMapperTypes.Add(xScaleSlider);
 
             yScaleSlider.DisplayInMapper = false;
-            yScaleSlider.ValueChanged += (float value) =>
+            yScaleSlider.ValueChanged += (value) =>
             {
                 if (Keybindings.Get(SliderSnapBinding).IsDown() && value != SnapSliderValue(value))
                 {
@@ -213,7 +240,7 @@ namespace Lench.EasyScale
             currentMapperTypes.Add(yScaleSlider);
 
             zScaleSlider.DisplayInMapper = false;
-            zScaleSlider.ValueChanged += (float value) =>
+            zScaleSlider.ValueChanged += (value) =>
             {
                 if (Keybindings.Get(SliderSnapBinding).IsDown() && value != SnapSliderValue(value))
                 {
@@ -237,18 +264,20 @@ namespace Lench.EasyScale
             // Length fix toggle
             if (block.GetBlockID() == (int)BlockType.Brace)
             {
-                var cylinderFixToggle = new MToggle("Length Fix", "length-fix", _loadedCylinderFix.Contains(block.Guid));
-                cylinderFixToggle.DisplayInMapper = false;
-                cylinderFixToggle.Toggled += (bool active) => FixCylinder(block.GetComponent<BraceCode>());
+                var cylinderFixToggle = new MToggle("Length Fix", "length-fix", _loadedCylinderFix.Contains(block.Guid))
+                {
+                    DisplayInMapper = false
+                };
+                cylinderFixToggle.Toggled += (active) => FixCylinder(block.GetComponent<BraceCode>());
                 currentMapperTypes.Add(cylinderFixToggle);
 
-                scalingToggle.Toggled += (bool active) =>
+                scalingToggle.Toggled += (active) =>
                 {
                     cylinderFixToggle.DisplayInMapper = active;
                 };
             }
 
-            scalingToggle.Toggled += (bool active) =>
+            scalingToggle.Toggled += (active) =>
             {
                 xScaleSlider.DisplayInMapper = active;
                 yScaleSlider.DisplayInMapper = active;
@@ -256,7 +285,7 @@ namespace Lench.EasyScale
             };
 
             // Mod enable toggle
-            OnToggle += (bool enabled) =>
+            OnToggle += (enabled) =>
             {
                 scalingToggle.DisplayInMapper = enabled;
                 scalingToggle.IsActive = false;
@@ -347,7 +376,7 @@ namespace Lench.EasyScale
         /// <param name="scale">Vector3 scale</param>
         public static void ScaleBlock(BlockBehaviour block, Vector3 scale)
         {
-            if (block.GetBlockID() == (int)BlockType.Brace)
+            if (block.GetBlockID() == (int) BlockType.Brace)
             {
                 var braceCode = block.GetComponent<BraceCode>();
 
@@ -362,8 +391,7 @@ namespace Lench.EasyScale
                 return;
             }
 
-            if (block.GetBlockID() == (int)BlockType.Spring ||
-                block.GetBlockID() == (int)BlockType.RopeWinch)
+            if (block.GetBlockID() == (int) BlockType.Spring || block.GetBlockID() == (int) BlockType.RopeWinch)
             {
                 var springCode = block.GetComponent<SpringCode>();
 
@@ -393,12 +421,10 @@ namespace Lench.EasyScale
         /// Fixes brace's cylinder length.
         /// </summary>
         /// <param name="brace">BraceCode script</param>
-        public static void FixCylinder(BraceCode brace)
+        public static void FixCylinder([NotNull]BraceCode brace)
         {
 #if DEBUG
-            if (brace == null)
-                Debug.LogError("Brace is null!");
-            else if (brace.Toggles.Find(toggle => toggle.Key == "length-fix") == null)
+            if (brace.Toggles.Find(toggle => toggle.Key == "length-fix") == null)
                 Debug.LogError("Brace has no added sliders.");
             else if (brace.Toggles.Find(toggle => toggle.Key == "length-fix").IsActive)
                 Debug.Log("Length fix for brace " + brace.Guid);
@@ -421,8 +447,8 @@ namespace Lench.EasyScale
             }
         }
 
-        private delegate void EnableToggleHandler(bool visible);
-        private static event EnableToggleHandler OnToggle;
+        public delegate void EnableToggleHandler(bool visible);
+        public static event EnableToggleHandler OnToggle;
 
         /// <summary>
         /// Called on setting toggle.
@@ -430,7 +456,7 @@ namespace Lench.EasyScale
         /// <param name="enabled">Is mod enabled</param>
         public static void ToggleEnabled(bool enabled)
         {
-            _scalingEnabled = enabled;
+            ModEnabled = enabled;
             OnToggle?.Invoke(enabled);
         }
     }

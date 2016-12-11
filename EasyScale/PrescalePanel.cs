@@ -1,13 +1,19 @@
 ﻿using System.Collections;
 using System.Text.RegularExpressions;
 using UnityEngine;
+// ReSharper disable UnusedMember.Local
 
 namespace Lench.EasyScale
 {
     public class PrescalePanel : MonoBehaviour
     {
-        public bool Minimized { get; private set; } = true;
-        public bool Animating { get; private set; } = false;
+        public bool Minimized
+        {
+            get { return !EasyScale.PrescaleEnabled; }
+            set { EasyScale.PrescaleEnabled = !value; }
+        }
+
+        public bool Animating { get; private set; }
 
         public int WindowID { get; } = spaar.ModLoader.Util.GetWindowID();
         public Rect WindowRect = new Rect(500, 500, 240, 50);
@@ -20,11 +26,9 @@ namespace Lench.EasyScale
             }
             set
             {
-                if (_scale != value)
-                {
-                    _scale = value;
-                    OnScaleChanged?.Invoke(_scale);
-                }
+                if (_scale == value) return;
+                _scale = value;
+                OnScaleChanged?.Invoke(_scale);
             }
         }
         private Vector3 _scale = Vector3.one;
@@ -35,6 +39,9 @@ namespace Lench.EasyScale
         
         public delegate void ScaleChangeHandler(Vector3 scale);
         public event ScaleChangeHandler OnScaleChanged;
+
+        public delegate void PrescaleToggleHandler(bool value);
+        public event PrescaleToggleHandler OnToggle;
 
         /// <summary>
         /// To be called after setting slider values externally to update their input fields.
@@ -72,33 +79,27 @@ namespace Lench.EasyScale
             }
         }
 
-        public Vector2 MinimizedPosition => new Vector2(Screen.width - WindowRect.width, Screen.height - 38);
+        public Vector2 MinimizedPosition => new Vector2(Screen.width - WindowRect.width - 240, Screen.height - 42);
         public Vector2 Position { get; private set; } = new Vector2(500, 500);
 
-        private static float DrawSlider(string label, float value, float min, float max, string old_text, out string new_text)
+        private static float DrawSlider(string label, float value, float min, float max, string oldText, out string newText)
         {
             GUILayout.BeginHorizontal();
             GUILayout.Label(label, spaar.ModLoader.UI.Elements.Labels.Default);
-            new_text = Regex.Replace(GUILayout.TextField(old_text,
+            newText = Regex.Replace(GUILayout.TextField(oldText,
                 spaar.ModLoader.UI.Elements.Labels.Default,
                 GUILayout.Width(60)), @"[^0-9\-.]", "");
             GUILayout.EndHorizontal();
 
             var slider = GUILayout.HorizontalSlider(value, min, max);
-            if (new_text != old_text)
+            if (newText != oldText)
             {
-                if (new_text != "-" &&
-                    !new_text.EndsWith(".") &&
-                    !new_text.EndsWith(".0"))
-                {
-                    float.TryParse(new_text.TrimEnd('-'), out value);
-                    new_text = value.ToString("0.00");
-                }
+                float.TryParse(newText, out value);
             }
             else if (!Equals(slider, value))
             {
                 value = slider;
-                new_text = value.ToString("0.00");
+                newText = value.ToString("0.00");
             }
 
             return value;
@@ -106,35 +107,41 @@ namespace Lench.EasyScale
 
         private void OnGUI()
         {
-            if (!spaar.ModLoader.Game.IsSimulating)
-            {
-                if (Minimized && !Animating) WindowRect.position = MinimizedPosition;
+            if (spaar.ModLoader.Game.IsSimulating || !EasyScale.ModEnabled) return;
+            if (Minimized && !Animating) WindowRect.position = MinimizedPosition;
 
-                GUI.skin = Skin;
-                WindowRect = GUILayout.Window(WindowID, WindowRect, DoWindow, "", spaar.ModLoader.UI.Elements.Windows.ClearDark,
-                    GUILayout.Width(240),
-                    GUILayout.Height(10));
+            GUI.skin = Skin;
+            WindowRect = GUILayout.Window(WindowID, WindowRect, DoWindow, "", spaar.ModLoader.UI.Elements.Windows.ClearDark,
+                GUILayout.Width(240),
+                GUILayout.Height(10));
 
-                if (!Minimized && !Animating) Position = WindowRect.position;
-            }
+            if (!Minimized && !Animating) Position = WindowRect.position;
         }
 
         private void DoWindow(int id)
         {
-            // Draw minimize button
-            if (GUILayout.Button("PRESCALE", spaar.ModLoader.UI.Elements.Buttons.Red))
+            GUILayout.BeginHorizontal();
             {
-                if (Minimized)
+                // Draw minimize button
+                if (GUILayout.Button("PRESCALE"))
                 {
-                    Minimized = false;
-                    StartCoroutine(Restore());
+                    if (Minimized)
+                    {
+                        Minimized = false;
+                        StartCoroutine(Restore());
+                    }
+                    else
+                    {
+                        Minimized = true;
+                        StartCoroutine(Minimize());
+                    }
+                    OnToggle?.Invoke(!Minimized);
                 }
-                else
-                {
-                    Minimized = true;
-                    StartCoroutine(Minimize());
-                }
+
+                // Draw enable badge
+                GUILayout.Label(Minimized ? "✘" : "✓", spaar.ModLoader.UI.Elements.InputFields.Default, GUILayout.Width(30));
             }
+            GUILayout.EndHorizontal();
             
             // Draw slider
             var tmpScale = Scale;
@@ -159,7 +166,7 @@ namespace Lench.EasyScale
             while (t <= 1f)
             {
                 if (Minimized) yield break;
-                t += Time.deltaTime * 5;
+                t += Time.deltaTime * 3;
                 pos = Vector2.Lerp(pos, Position, t);
                 yield return WindowRect.position = pos;
             }
@@ -177,7 +184,7 @@ namespace Lench.EasyScale
             while (t <= 1f)
             {
                 if (!Minimized) yield break;
-                t += Time.deltaTime * 5;
+                t += Time.deltaTime * 3;
                 pos = Vector2.Lerp(pos, MinimizedPosition, t);
                 yield return WindowRect.position = pos;
             }
