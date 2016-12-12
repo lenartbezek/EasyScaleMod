@@ -1,6 +1,9 @@
 ﻿using System.Collections;
 using System.Text.RegularExpressions;
+using spaar.ModLoader;
+using spaar.ModLoader.UI;
 using UnityEngine;
+
 // ReSharper disable UnusedMember.Local
 
 namespace Lench.EasyScale
@@ -15,8 +18,8 @@ namespace Lench.EasyScale
 
         public bool Animating { get; private set; }
 
-        public int WindowID { get; } = spaar.ModLoader.Util.GetWindowID();
-        public Rect WindowRect = new Rect(500, 500, 240, 50);
+        public int WindowID { get; } = Util.GetWindowID();
+        public Rect WindowRect = new Rect(500, 500, 240, 190);
 
         public Vector3 Scale
         {
@@ -70,7 +73,7 @@ namespace Lench.EasyScale
         {
             get
             {
-                var skin = spaar.ModLoader.UI.ModGUI.Skin;
+                var skin = ModGUI.Skin;
                 GUI.backgroundColor = new Color(0.7f, 0.7f, 0.7f, 0.7f);
                 skin.window.padding.left = 8;
                 skin.window.padding.right = 8;
@@ -79,15 +82,15 @@ namespace Lench.EasyScale
             }
         }
 
-        public Vector2 MinimizedPosition => new Vector2(Screen.width * 0.8f - WindowRect.width, Screen.height - 42);
+        public Vector2 MinimizedPosition => new Vector2(42 - WindowRect.width, Screen.height - 400);
         public static Vector2 Position { get; set; }
 
         private static float DrawSlider(string label, float value, float min, float max, string oldText, out string newText)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label(label, spaar.ModLoader.UI.Elements.Labels.Default);
+            GUILayout.Label(label, Elements.Labels.Default);
             newText = Regex.Replace(GUILayout.TextField(oldText,
-                spaar.ModLoader.UI.Elements.Labels.Default,
+                Elements.Labels.Default,
                 GUILayout.Width(60)), @"[^0-9\-.]", "");
             GUILayout.EndHorizontal();
 
@@ -107,13 +110,14 @@ namespace Lench.EasyScale
 
         private void OnGUI()
         {
-            if (spaar.ModLoader.Game.IsSimulating || !Mod.ModEnabled) return;
-            if (Minimized && !Animating) WindowRect.position = MinimizedPosition;
+            if (Game.IsSimulating || !Mod.ModEnabled) return;
+            if (!Animating)
+                WindowRect.position = Minimized 
+                    ? MinimizedPosition 
+                    : Position;
 
             GUI.skin = Skin;
-            WindowRect = GUILayout.Window(WindowID, WindowRect, DoWindow, "", spaar.ModLoader.UI.Elements.Windows.ClearDark,
-                GUILayout.Width(240),
-                GUILayout.Height(10));
+            WindowRect = GUI.Window(WindowID, WindowRect, DoWindow, "", Elements.Windows.ClearDark);
 
             if (!Minimized && !Animating) Position = WindowRect.position;
         }
@@ -122,36 +126,49 @@ namespace Lench.EasyScale
         {
             GUILayout.BeginHorizontal();
             {
-                // Draw minimize button
-                if (GUILayout.Button("PRESCALE", 
-                    Minimized 
-                        ? spaar.ModLoader.UI.Elements.Buttons.Red 
-                        : spaar.ModLoader.UI.Elements.Buttons.Default))
+                // Draw sliders
+                GUILayout.BeginVertical();
                 {
-                    if (Minimized)
-                    {
-                        Minimized = false;
-                        StartCoroutine(Restore());
-                    }
-                    else
-                    {
-                        Minimized = true;
-                        StartCoroutine(Minimize());
-                    }
-                    OnToggle?.Invoke(!Minimized);
-                }
+                    var tmpScale = Scale;
 
-                // Draw enable badge
-                GUILayout.Label(Minimized ? "✘" : "✓", spaar.ModLoader.UI.Elements.InputFields.Default, GUILayout.Width(30));
+                    GUILayout.FlexibleSpace();
+                    tmpScale.x = DrawSlider("<b>X</b>", tmpScale.x, 0.1f, 3f, _xSliderString, out _xSliderString);
+                    GUILayout.FlexibleSpace();
+                    tmpScale.y = DrawSlider("<b>Y</b>", tmpScale.y, 0.1f, 3f, _ySliderString, out _ySliderString);
+                    GUILayout.FlexibleSpace();
+                    tmpScale.z = DrawSlider("<b>Z</b>", tmpScale.z, 0.1f, 3f, _zSliderString, out _zSliderString);
+                    GUILayout.FlexibleSpace();
+
+                    Scale = tmpScale;
+                }
+                GUILayout.EndVertical();
+
+                // Draw minimize button
+                GUILayout.BeginVertical(GUILayout.Width(30));
+                {
+                    if (GUILayout.Button("P\nR\nE\nS\nC\nA\nL\nE",
+                        Minimized
+                            ? Elements.Buttons.Red
+                            : Elements.Buttons.Default))
+                    {
+                        if (Minimized)
+                        {
+                            Minimized = false;
+                            StartCoroutine(Restore());
+                        }
+                        else
+                        {
+                            Minimized = true;
+                            StartCoroutine(Minimize());
+                        }
+                        OnToggle?.Invoke(!Minimized);
+                    }
+
+                    GUILayout.Label(Minimized ? "✘" : "✓", Elements.InputFields.Default);
+                }
+                GUILayout.EndVertical();
             }
             GUILayout.EndHorizontal();
-            
-            // Draw slider
-            var tmpScale = Scale;
-            tmpScale.x = DrawSlider("<b>X</b>", tmpScale.x, 0.1f, 3f, _xSliderString, out _xSliderString);
-            tmpScale.y = DrawSlider("<b>Y</b>", tmpScale.y, 0.1f, 3f, _ySliderString, out _ySliderString);
-            tmpScale.z = DrawSlider("<b>Z</b>", tmpScale.z, 0.1f, 3f, _zSliderString, out _zSliderString);
-            Scale = tmpScale;
 
             // Drag window
             if (!Minimized)
