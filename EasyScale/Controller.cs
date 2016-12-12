@@ -25,6 +25,7 @@ namespace Lench.EasyScale
             {
                 if (!active) DestroyImmediate(_prescalePanel);
             };
+            Mod.OnToggle += EnablePrescale;
 
             CheckForModUpdate();
         }
@@ -90,7 +91,7 @@ namespace Lench.EasyScale
             }
         }
 
-        private void EnablePrescale(bool enable)
+        public void EnablePrescale(bool enable)
         {
             var scale = enable && Mod.PrescaleDictionary.ContainsKey(_currentBlockType)
                 ? Mod.PrescaleDictionary[_currentBlockType]
@@ -98,13 +99,13 @@ namespace Lench.EasyScale
             ScaleGhost(scale);
         }
 
-        private void SetPrescale(Vector3 scale)
+        public void SetPrescale(Vector3 scale)
         {
             if (Mod.PrescaleEnabled) ScaleGhost(scale);
             Mod.PrescaleDictionary[_currentBlockType] = scale;
         }
 
-        private void ScaleGhost(Vector3 scale)
+        public void ScaleGhost(Vector3 scale)
         {
             if (_currentBlockType == (int) BlockType.Wheel)
                 scale.Scale(new Vector3(0.55f, 0.55f, 0.55f));
@@ -112,7 +113,7 @@ namespace Lench.EasyScale
                 _currentGhost.localScale = scale;
         }
 
-        private void CheckForModUpdate(bool verbose = false)
+        public void CheckForModUpdate(bool verbose = false)
         {
             var updater = gameObject.AddComponent<Updater>();
             updater.Check(
