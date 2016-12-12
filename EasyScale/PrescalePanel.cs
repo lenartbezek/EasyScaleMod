@@ -82,7 +82,9 @@ namespace Lench.EasyScale
             }
         }
 
-        public Vector2 MinimizedPosition => new Vector2(42 - WindowRect.width, Screen.height - 400);
+        private Vector2 MinimizedPosition => new Vector2(42 - WindowRect.width, Screen.height - MinimizedHeight);
+
+        public static float MinimizedHeight { get; set; }
         public static Vector2 Position { get; set; }
 
         private static float DrawSlider(string label, float value, float min, float max, string oldText, out string newText)
@@ -119,7 +121,13 @@ namespace Lench.EasyScale
             GUI.skin = Skin;
             WindowRect = GUI.Window(WindowID, WindowRect, DoWindow, "", Elements.Windows.ClearDark);
 
-            if (!Minimized && !Animating) Position = WindowRect.position;
+            if (!Animating)
+            {
+                if (!Minimized)
+                    Position = WindowRect.position;
+                else
+                    MinimizedHeight = Screen.height - WindowRect.position.y;
+            }
         }
 
         private void DoWindow(int id)
@@ -131,6 +139,7 @@ namespace Lench.EasyScale
                 {
                     var tmpScale = Scale;
 
+                    GUILayout.Label("<color=#888888><b>ADJUST BLOCK SCALE</b></color>", new GUIStyle(Elements.Labels.Default) {alignment = TextAnchor.MiddleCenter});
                     GUILayout.FlexibleSpace();
                     tmpScale.x = DrawSlider("<b>X</b>", tmpScale.x, 0.1f, 3f, _xSliderString, out _xSliderString);
                     GUILayout.FlexibleSpace();
@@ -171,8 +180,7 @@ namespace Lench.EasyScale
             GUILayout.EndHorizontal();
 
             // Drag window
-            if (!Minimized)
-                GUI.DragWindow(new Rect(0, 0, WindowRect.width, WindowRect.height));
+            GUI.DragWindow(new Rect(0, 0, WindowRect.width, WindowRect.height));
         }
 
         private IEnumerator Restore()

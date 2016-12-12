@@ -52,6 +52,7 @@ namespace Lench.EasyScale
             PrescalePanel.Position = new Vector2(
                 Configuration.GetFloat("prescale-pos-x", 500),
                 Configuration.GetFloat("prescale-pos-y", 500));
+            PrescalePanel.MinimizedHeight = Configuration.GetFloat("minimized-height", 400);
 
             SettingsMenu.RegisterSettingsButton("SCALE", ToggleEnabled, ModEnabled, 12);
 
@@ -72,6 +73,7 @@ namespace Lench.EasyScale
             Configuration.SetBool("prescale", PrescaleEnabled);
             Configuration.SetFloat("prescale-pos-x", PrescalePanel.Position.x);
             Configuration.SetFloat("prescale-pos-y", PrescalePanel.Position.y);
+            Configuration.SetFloat("minimized-height", PrescalePanel.MinimizedHeight);
             Configuration.Save();
         }
 
