@@ -5,5 +5,9 @@
 # Easy Scale Mod
 Besiege v0.3
 
-This mod allows you to scale blocks with sliders.
-Additionally, it fixes scaled brace cylinder length.
+This mod enables you to scale blocks before or after placing. Use the prescale panel to adjust the block size before placing, or use the sliders in the key mapper window. Use the scale button in the settings menu to disable the mod.
+
+![image](http://i.imgur.com/5LtzTgL.gif)
+
+Requires [Spaar's Mod Loader](http://forum.spiderlinggames.co.uk/index.php?threads/spaars-mod-loader-1-5-4-besiege-v0-4.519/).
+To install, extract the `EasyScale.dll` to `.../Besiege_Data/Mods/`.
