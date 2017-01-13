@@ -112,7 +112,7 @@ namespace Lench.EasyScale
 
         private void OnGUI()
         {
-            if (Game.IsSimulating || !Mod.ModEnabled) return;
+            if (StatMaster.isSimulating || StatMaster.inMenu || !Mod.ModEnabled) return;
             if (!Animating)
                 WindowRect.position = Minimized 
                     ? MinimizedPosition 
