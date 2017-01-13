@@ -22,6 +22,7 @@ namespace Lench.EasyScale
 
         public static bool ModEnabled;
         public static bool PrescaleEnabled;
+        public static SettingsButton ModEnabledButton;
 
         private static CopiedData _copiedData;
 
@@ -54,7 +55,14 @@ namespace Lench.EasyScale
                 Configuration.GetFloat("prescale-pos-y", 500));
             PrescalePanel.MinimizedHeight = Configuration.GetFloat("minimized-height", 400);
 
-            SettingsMenu.RegisterSettingsButton("SCALE", ToggleEnabled, ModEnabled, 12);
+            ModEnabledButton = new SettingsButton
+            {
+                OnToggle = ToggleEnabled,
+                Text = "SCALE",
+                Value = ModEnabled,
+                FontSize = 12
+            };
+            ModEnabledButton.Create();
 
             Keybindings.AddKeybinding(SliderSnapBinding, new Key(KeyCode.LeftShift, KeyCode.None));
             Keybindings.AddKeybinding(MoveAllSliderBinding, new Key(KeyCode.None, KeyCode.Z));
@@ -69,6 +77,8 @@ namespace Lench.EasyScale
 
         public override void OnUnload()
         {
+            ModEnabledButton.Destroy();
+
             Configuration.SetBool("enabled", ModEnabled);
             Configuration.SetBool("prescale", PrescaleEnabled);
             Configuration.SetFloat("prescale-pos-x", PrescalePanel.Position.x);
@@ -396,8 +406,8 @@ namespace Lench.EasyScale
 
                 block.transform.localScale = scale;
 
-                braceCode.SetStartPos(startPoint);
-                braceCode.SetEndPos(endPoint);
+                braceCode.startPoint.position = startPoint;
+                braceCode.endPoint.position = endPoint;
                 FixCylinder(braceCode);
                 return;
             }
@@ -411,8 +421,8 @@ namespace Lench.EasyScale
 
                 block.transform.localScale = scale;
 
-                springCode.SetStartPos(startPoint);
-                springCode.SetEndPos(endPoint);
+                springCode.startPoint.position = startPoint;
+                springCode.endPoint.position = endPoint;
                 return;
             }
 

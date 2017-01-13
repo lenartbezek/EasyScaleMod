@@ -2,6 +2,8 @@
 using spaar.ModLoader;
 using System.Reflection;
 using UnityEngine;
+using UnityEngine.SceneManagement;
+
 // ReSharper disable UnusedMember.Local
 // ReSharper disable PossibleNullReferenceException
 
@@ -26,6 +28,7 @@ namespace Lench.EasyScale
                 if (!active) DestroyImmediate(_prescalePanel);
             };
             Mod.OnToggle += EnablePrescale;
+            SceneManager.sceneLoaded += ActivateHiddenBlock;
 
             CheckForModUpdate();
         }
@@ -89,6 +92,12 @@ namespace Lench.EasyScale
                     DestroyImmediate(_prescalePanel);
                 }
             }
+        }
+
+        private static void ActivateHiddenBlock(Scene s, LoadSceneMode mode)
+        {
+            var b = GameObject.Find("HUD/BottomBar/AlignBottomLeft/BLOCK BUTTONS/t_BLOCKS/Scaling Block");
+            b?.SetActive(true);
         }
 
         public void EnablePrescale(bool enable)
