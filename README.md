@@ -3,7 +3,7 @@
 [![GitHub total downloads](https://img.shields.io/github/downloads/lench4991/EasyScaleMod/total.svg)](https://github.com/lench4991/EasyScaleMod/releases)
 
 # Easy Scale Mod
-Besiege v0.3
+Besiege v0.45 and v0.60
 
 This mod enables you to scale blocks before or after placing. Use the prescale panel to adjust the block size before placing, or use the sliders in the key mapper window. Use the scale button in the settings menu to disable the mod.
 
