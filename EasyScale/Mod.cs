@@ -13,25 +13,17 @@ namespace Lench.EasyScale
     [OnGameInit]
     public class Mod : MonoBehaviour
     {
-        internal const string SliderSnapBinding = "Slider snap";
-        internal const string MoveAllSliderBinding = "Move all sliders";
-
         private static readonly FieldInfo MapperTypesField =
             typeof(SaveableDataHolder).GetField("mapperTypes", BindingFlags.Instance | BindingFlags.NonPublic);
 
         private CopiedData _copiedData;
         private bool _keyMapperOpen;
+        private BlockBehaviour _lastBlock;
 
         // ReSharper disable once CollectionNeverQueried.Local
         private List<Guid> _loadedBlocks = new List<Guid>();
 
         private bool _movingAllSliders;
-
-        public Dictionary<int, Vector3> PrescaleDictionary = new Dictionary<int, Vector3>();
-        public string Name { get; } = "Easy Scale";
-        public string DisplayName { get; } = "Easy Scale";
-        public string Author { get; } = "Lench";
-        public Version Version { get; } = Assembly.GetExecutingAssembly().GetName().Version;
 
         // ReSharper disable once UnusedMember.Local
         private void Start()
@@ -50,7 +42,7 @@ namespace Lench.EasyScale
         // ReSharper disable once UnusedMember.Local
         private void Update()
         {
-            if (BlockMapper.CurrentInstance != null)
+            if (BlockMapper.CurrentInstance != null && BlockMapper.CurrentInstance.Block != null)
             {
                 //AddPiece.Instance.
 
@@ -59,6 +51,12 @@ namespace Lench.EasyScale
                 {
                     OnKeymapperOpen();
                     _keyMapperOpen = true;
+                }
+
+                if (BlockMapper.CurrentInstance.Block != _lastBlock)
+                {
+                    OnKeymapperOpen();
+                    _lastBlock = BlockMapper.CurrentInstance.Block;
                 }
 
                 // Handle key presses.
@@ -112,7 +110,7 @@ namespace Lench.EasyScale
 
         /// <param name="block"></param>
         /// <returns>True if block has added sliders.</returns>
-        public bool HasSliders(BlockBehaviour block)
+        private bool HasSliders(BlockBehaviour block)
         {
             return block.MapperTypes.Exists(match => match.Key == "scale");
         }
@@ -121,7 +119,7 @@ namespace Lench.EasyScale
         ///     Adds sliders to all blocks.
         ///     Called on keymapper open.
         /// </summary>
-        public void AddAllSliders()
+        private void AddAllSliders()
         {
             foreach (var block in Machine.Active().BuildingBlocks)
                 if (!HasSliders(block))
@@ -132,7 +130,7 @@ namespace Lench.EasyScale
         ///     Adds sliders to the BlockBehaviour object.
         /// </summary>
         /// <param name="block">block's script</param>
-        public void AddSliders(BlockBehaviour block)
+        private void AddSliders(BlockBehaviour block)
         {
             // Get current mapper types
             var currentMapperTypes = block.MapperTypes;
@@ -229,7 +227,7 @@ namespace Lench.EasyScale
         /// <summary>
         ///     Called on Reset button click.
         /// </summary>
-        internal static void Reset()
+        private void Reset()
         {
             var b = BlockMapper.CurrentInstance.Block;
             b.Toggles.First(s => s.Key == "scale").IsActive = false;
@@ -241,7 +239,7 @@ namespace Lench.EasyScale
         /// <summary>
         ///     Called on Ctrl+C and Copy button click.
         /// </summary>
-        internal void Copy()
+        private void Copy()
         {
             var b = BlockMapper.CurrentInstance.Block;
             _copiedData = new CopiedData
@@ -255,7 +253,7 @@ namespace Lench.EasyScale
         /// <summary>
         ///     Called on Ctrl+V and Paste button click.
         /// </summary>
-        internal void Paste()
+        private void Paste()
         {
             if (_copiedData == null)
                 return;
@@ -276,7 +274,7 @@ namespace Lench.EasyScale
         /// </summary>
         /// <param name="block">BlockBehaviour object</param>
         /// <param name="scale">Vector3 scale</param>
-        public void ScaleBlock(BlockBehaviour block, Vector3 scale)
+        private static void ScaleBlock(BlockBehaviour block, Vector3 scale)
         {
             if (block.BlockID == (int) BlockType.Brace)
             {
@@ -306,7 +304,7 @@ namespace Lench.EasyScale
                 return;
             }
 
-            block.transform.localScale = scale;
+            block.SetScale(scale);
         }
 
         private class CopiedData
