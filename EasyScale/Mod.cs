@@ -283,7 +283,7 @@ namespace Lench.EasyScale
                 var startPoint = braceCode.startPoint.position;
                 var endPoint = braceCode.endPoint.position;
 
-                block.transform.localScale = scale;
+                block.SetScale(scale);
 
                 braceCode.startPoint.position = startPoint;
                 braceCode.endPoint.position = endPoint;
@@ -297,7 +297,7 @@ namespace Lench.EasyScale
                 var startPoint = springCode.startPoint.position;
                 var endPoint = springCode.endPoint.position;
 
-                block.transform.localScale = scale;
+                block.SetScale(scale);
 
                 springCode.startPoint.position = startPoint;
                 springCode.endPoint.position = endPoint;
